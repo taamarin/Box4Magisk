@@ -1,0 +1,342 @@
+#!/system/bin/sh
+
+scripts=$(realpath $0)
+scripts_dir=$(dirname ${scripts})
+source /data/adb/box/settings.ini
+
+uid_list=()
+
+find_packages_uid() {
+  for user in $(ls /data/user/) ; do
+    for package in ${packages_list[@]} ; do
+      uid_list[${#uid_list[@]}]=$(pm list packages -U --user ${user} | grep ${package} | awk -F 'uid:' '{print $2}')
+    done
+  done
+}
+
+forward() {
+  ${iptables} $1 FORWARD -o ${tun_device} -j ACCEPT
+  ${iptables} $1 FORWARD -i ${tun_device} -j ACCEPT
+}
+
+start_redirect() {
+  ${iptables} -t nat -N BOX_EXTERNAL
+  ${iptables} -t nat -F BOX_EXTERNAL
+  ${iptables} -t nat -N BOX_LOCAL
+  ${iptables} -t nat -F BOX_LOCAL
+
+  if [ "${bin_name}" == "clash" ] ; then
+    ${iptables} -t nat -A BOX_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+    ${iptables} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+    ${iptables} -t nat -A BOX_EXTERNAL -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+    ${iptables} -t nat -A BOX_LOCAL -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+    #  else
+    #    Other types of inbound should be added here to receive DNS traffic instead of sniffing
+    #    ${iptables} -t nat -A BOX_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${redir_port}
+    #    ${iptables} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${redir_port}
+  fi
+
+  for subnet in ${internet[@]} ; do
+    ${iptables} -t nat -A BOX_EXTERNAL -d ${subnet} -j RETURN
+    ${iptables} -t nat -A BOX_LOCAL -d ${subnet} -j RETURN
+  done
+
+  ${iptables} -t nat -A BOX_EXTERNAL -p tcp -i lo -j REDIRECT --to-ports ${redir_port}
+
+  for ap in ${ap_list[@]} ; do
+    ${iptables} -t nat -A BOX_EXTERNAL -p tcp -i ${ap} -j REDIRECT --to-ports ${redir_port}
+  done
+
+  ${iptables} -t nat -I PREROUTING -j BOX_EXTERNAL
+
+  ${iptables} -t nat -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+  for ignore in ${ignore_out_list[@]} ; do
+    ${iptables} -t nat -I BOX_LOCAL -o ${ignore} -j RETURN
+  done
+
+  if [ "${proxy_mode}" = "blacklist" ] ; then
+    if [ "${uid_list}" = "" ] ; then
+      # Route Everything
+      ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
+      log "[Info]: transparent proxy for all apps."
+    else
+      # Bypass apps
+      for appid in ${uid_list[@]} ; do
+        ${iptables} -t nat -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
+      done
+      # Allow !app
+      ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
+      log "[Info]: proxy mode: ${proxy_mode} ${packages_list[@]} has no transparent proxy."
+    fi
+  elif [ "${proxy_mode}" = "whitelist" ] ; then
+    # Route apps to Box
+    for appid in ${appid_list[@]} ; do
+      ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j REDIRECT --to-ports ${redir_port}
+    done
+    ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${redir_port}
+    ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${redir_port}
+    log "proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+  fi
+
+  ${iptables} -t nat -I OUTPUT -j BOX_LOCAL
+
+  ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+}
+
+stop_redirect() {
+  ${iptables} -t nat -D PREROUTING -j BOX_EXTERNAL
+
+  ${iptables} -t nat -D OUTPUT -j BOX_LOCAL
+
+  ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+
+  ${iptables} -t nat -F BOX_EXTERNAL
+  ${iptables} -t nat -X BOX_EXTERNAL
+  ${iptables} -t nat -F BOX_LOCAL
+  ${iptables} -t nat -X BOX_LOCAL
+}
+
+start_tproxy() {
+  ip rule add fwmark ${id} lookup ${id}
+  ip route add local default dev lo table ${id}
+
+  ${iptables} -t mangle -N BOX_EXTERNAL
+  ${iptables} -t mangle -F BOX_EXTERNAL
+
+  # Bypass box itself
+  # ${iptables} -t mangle -A BOX_EXTERNAL -j RETURN -m mark --mark ${routing_mark}
+
+  # Bypass other if
+  # Notice: Some interface is named with r_ / oem / nm_ / qcom_
+  # It might need more complicated solution.
+  ${iptables} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
+  ${iptables} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
+
+  # Bypass internet
+  if [ "${bin_name}" == "clash" ] ; then
+    for subnet in ${internet[@]} ; do
+      ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
+    done
+  else
+    for subnet in ${internet[@]} ; do
+      ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
+      ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
+    done
+  fi
+
+  ${iptables} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+  ${iptables} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+
+  # Allow ap interface
+  # Notice: Old android device may only have one wlan interface.
+  # Some new android device have multiple wlan interface like wlan0(for internet), wlan1(for AP).
+  for ap in ${ap_list[@]} ; do
+    ${iptables} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+    ${iptables} -t mangle -A BOX_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+  done
+
+  ${iptables} -t mangle -I PREROUTING -j BOX_EXTERNAL
+
+  ${iptables} -t mangle -N BOX_LOCAL
+  ${iptables} -t mangle -F BOX_LOCAL
+
+  # Bypass ignored interfaces
+  for ignore in ${ignore_out_list[@]} ; do
+    ${iptables} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
+  done
+
+  # Bypass internet
+  if [ "${bin_name}" == "clash" ] ; then
+    for subnet in ${internet[@]} ; do
+      ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
+    done
+  else
+    for subnet in ${internet[@]} ; do
+      ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
+      ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
+    done
+  fi
+
+  # Bypass box itself
+  ${iptables} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+  # ${iptables} -t mangle -I BOX_LOCAL -j RETURN -m mark --mark ${routing_mark}
+
+  # Disable kernel
+  # ${iptables} -t mangle -A BOX_LOCAL -m owner ! --uid 0-99999999 -j DROP
+
+  if [ "${proxy_mode}" = "blacklist" ] ; then
+    if [ "${uid_list}" = "" ] ; then
+      # Route Everything
+      ${iptables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
+      ${iptables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
+      log "[Info]: transparent proxy for all apps."
+    else
+      # Bypass apps
+      for appid in ${uid_list[@]} ; do
+        ${iptables} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
+      done
+      # Allow !app
+      ${iptables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
+      ${iptables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
+      log "[Info]: proxy mode: ${proxy_mode} ${packages_list[@]} has no transparent proxy."
+    fi
+  elif [ "${proxy_mode}" = "whitelist" ] ; then
+    # Route apps to Box
+    for appid in ${appid_list[@]} ; do
+      ${iptables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
+      ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
+    done
+    ${iptables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
+    log "proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+  fi
+
+  ${iptables} -t mangle -I OUTPUT -j BOX_LOCAL
+
+  ${iptables} -t mangle -N DIVERT
+  ${iptables} -t mangle -F DIVERT
+
+  ${iptables} -t mangle -A DIVERT -j MARK --set-mark ${id}
+  ${iptables} -t mangle -A DIVERT -j ACCEPT
+
+  ${iptables} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+
+
+  # This rule blocks local access to tproxy-port to prevent traffic loopback.
+  ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
+
+
+  if [ "${bin_name}" == "clash" ] ; then
+    ${iptables} -t nat -N CLASH_DNS_EXTERNAL
+    ${iptables} -t nat -F CLASH_DNS_EXTERNAL
+
+    ${iptables} -t nat -A CLASH_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+
+    ${iptables} -t nat -I PREROUTING -j CLASH_DNS_EXTERNAL
+
+
+    ${iptables} -t nat -N CLASH_DNS_LOCAL
+    ${iptables} -t nat -F CLASH_DNS_LOCAL
+
+    ${iptables} -t nat -A CLASH_DNS_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+    ${iptables} -t nat -A CLASH_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+
+    ${iptables} -t nat -I OUTPUT -j CLASH_DNS_LOCAL
+
+    # Fix ICMP (ping), this does not guarantee that the ping result is valid (proxies such as clash do not support forwarding ICMP), 
+    # just that it returns a result, "--to-destination" can be set to a reachable address.
+    ${iptables} -t nat -I OUTPUT -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+    ${iptables} -t nat -I PREROUTING -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  fi
+}
+
+stop_tproxy() {
+  ip rule del fwmark ${id} table ${id}
+  ip route del local default dev lo table ${id}
+
+  ${iptables} -t mangle -D PREROUTING -j BOX_EXTERNAL
+    
+  ${iptables} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+
+  ${iptables} -t mangle -D OUTPUT -j BOX_LOCAL
+
+  ${iptables} -t mangle -F BOX_EXTERNAL
+  ${iptables} -t mangle -X BOX_EXTERNAL
+
+  ${iptables} -t mangle -F BOX_LOCAL
+  ${iptables} -t mangle -X BOX_LOCAL
+
+  ${iptables} -t mangle -F DIVERT
+  ${iptables} -t mangle -X DIVERT
+
+  ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
+
+  ${iptables} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
+
+  ${iptables} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
+
+  ${iptables} -t nat -F CLASH_DNS_EXTERNAL
+  ${iptables} -t nat -X CLASH_DNS_EXTERNAL
+
+  ${iptables} -t nat -F CLASH_DNS_LOCAL
+  ${iptables} -t nat -X CLASH_DNS_LOCAL
+
+  ${iptables} -t nat -D OUTPUT -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  ${iptables} -t nat -D PREROUTING -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+}
+
+if [ "${proxy_mode}" != "core" ] ; then
+  case "$1" in
+    enable)
+      stop_tproxy >> /dev/null 2>&1
+      stop_redirect >> /dev/null 2>&1
+      sleep 0.75
+      find_packages_uid
+      if [ "${network_mode}" = "UDP" ] ; then
+        if (zcat /proc/config.gz | grep -q TPROXY) ; then
+          log "[Info]: use TPROXY:TCP+UDP."
+          log "[Info]: creating iptables transparent proxy rules."
+          start_tproxy && log "[Info]: create iptables transparent proxy rules done." || (log "[Error]: create iptables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
+        else
+          log "[Warning]: the device does not support TPROXY, please switch network_mode."
+          log "[Info]: use REDIRECT:TCP."
+          log "[Info]: creating iptables transparent proxy rules."
+          start_redirect && log "[Info]: create iptables transparent proxy rules done." || (log "[Error]: create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+          forward -I
+        fi
+      else
+        [ "${network_mode}" = "TCP" ] && log "[Info]: use REDIRECT:TCP." || log "[Info]: use MIXED:TCP+TUN."
+        log "[Info]: creating iptables transparent proxy rules."
+        start_redirect && log "[Info]: create iptables transparent proxy rules done." || (log "[Error]: create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+        forward -I
+      fi
+      ;;
+    disable)
+      log "[Warning]: cleaning up iptables transparent proxy rules."
+      stop_tproxy >> /dev/null 2>&1
+      stop_redirect >> /dev/null 2>&1
+      forward -D
+      log "[Warning]: clean up iptables transparent proxy rules done."
+      ;;
+    renew)
+      log "[Warning]: cleaning up iptables transparent proxy rules."
+      stop_tproxy >> /dev/null 2>&1
+      stop_redirect >> /dev/null 2>&1
+      forward -D
+      log "[Warning]: clean up iptables transparent proxy rules done."
+      sleep 0.75
+      find_packages_uid
+      if [ "${network_mode}" = "UDP" ] ; then
+        if (zcat /proc/config.gz | grep -q TPROXY) ; then
+          log "[Info]: use TPROXY:TCP+UDP."
+          log "[Info]: creating iptables transparent proxy rules."
+          start_tproxy && log "[Info]: create iptables transparent proxy rules done." || (log "[Error]: create iptables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
+        else
+          log "[Warning]: the device does not support TPROXY, please switch network_mode."
+          log "[Info]: use REDIRECT:TCP."
+          log "[Info]: creating iptables transparent proxy rules."
+          start_redirect && log "[Info]: create iptables transparent proxy rules done." || (log "[Error]: create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+          forward -I
+        fi
+      else
+        [ "${network_mode}" = "TCP" ] && log "[Info]: use REDIRECT:TCP." || log "[Info]: use MIXED:TCP+TUN."
+        log "[Info]: creating iptables transparent proxy rules."
+        start_redirect && log "[Info]: create iptables transparent proxy rules done." || (log "[Error]: create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+        forward -I
+      fi
+      ;;
+    *)
+      echo "$0:  usage: $0 {enable|disable|renew}"
+      ;;
+  esac
+else
+  stop_tproxy >> /dev/null 2>&1
+  stop_redirect >> /dev/null 2>&1
+  forward -I
+  log "[Info]: proxy_mode: ${proxy_mode} disable transparent proxy."
+fi

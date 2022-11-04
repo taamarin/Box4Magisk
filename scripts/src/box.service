@@ -1,0 +1,253 @@
+#!/system/bin/sh
+
+scripts=$(realpath $0)
+scripts_dir=$(dirname ${scripts})
+source /data/adb/box/settings.ini
+
+ipv6() {
+  if [ "${ipv6}" == "false" ]; then
+    echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
+    echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+    echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+    echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+    echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+  else
+    echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
+    echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+    echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+    echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+    echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+  fi
+}
+
+probe_bin_alive() {
+   [ -f ${pid_file} ] && cmd_file="/proc/$(pidof ${bin_name})/cmdline" || return 1
+   [ -f ${cmd_file} ] && grep -q ${bin_path} ${cmd_file} && return 0 || return 1
+}
+
+find_netstat_path() {
+  [ -f /system/bin/netstat ] && alias netstat="/system/bin/netstat" && return 0
+  [ -f /system/xbin/netstat ] && alias netstat="/system/xbin/netstat" && return 0
+  return 1
+}
+
+wait_bin_listen() {
+  wait_count=0
+  bin_pid=$(cat ${pid_file})
+  find_netstat_path && \
+  check_bin_cmd="netstat -tnulp | grep ${bin_name} >> /dev/null" || \
+  check_bin_cmd="ls -lh /proc/${bin_pid}/fd | grep -q socket"
+  while probe_bin_alive && ! eval "${check_bin_cmd}" && [ ${wait_count} -lt 100 ]; do
+    sleep 0.5
+    wait_count=$((${wait_count} + 1))
+  done
+  if probe_bin_alive && eval "${check_bin_cmd}"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+crontab_geo() {
+  if [ ! "${update_interval}" == "false" ]; then
+    echo "${update_interval} ${scripts_dir}/box.tool subgeo" >> ${run_path}/root \
+    && log "[Info]: crontab geo and subscription (${update_interval})。"
+    log "[Info]: geox (${auto_updateGeoX})。"
+    log "[Info]: subscription (${auto_updateSubcript})。"
+  else
+    log "[Info]: crontab geox & subscription is disable"
+  fi
+}
+
+start_listen() {
+  if ! wait_bin_listen; then
+    if probe_bin_alive ; then
+    log "[Error]: ${bin_name} service is running but may not listening"
+    else
+      log "[Error]: listen, ${bin_name} port is not detected  "
+      kill `cat ${pid_file}`
+      rm -f ${pid_file} && exit 1
+    fi
+  fi
+}
+
+detected_port() {
+  sleep 1
+  if [ "${port_detect}" == "true" ]; then
+    if ! (${scripts_dir}/box.tool detec); then
+      exit 0
+    fi
+  else
+    log "[Info]: skip!!!! port detected。"
+  fi
+}
+
+tree_dir() {
+  termux_bin="/data/data/com.termux/files/usr/bin"
+  if [ -f ${termux_bin}/tree ]; then
+    ${termux_bin}/tree -a ${data_dir}/${bin_name} > ${run_path}/tree.log 2>&1
+    ${busybox_path} awk '/./' ${run_path}/tree.log > ${run_path}/tree.logs
+    while read p ; do
+      log "[Info]:" "$p"
+    done <${run_path}/tree.logs
+    rm -rf ${run_path}/tree.logs && rm -rf ${run_path}/tree.log
+  fi
+}
+
+run_box() {
+  ulimit -SHn 1000000
+  #################### SING-BOX ###################
+  if [ "${bin_name}" == "sing-box" ]; then
+    tree_dir
+    ${bin_path} check -D ${data_dir}/sing-box -c ${sing_confs_dir} > ${run_path}/error.log 2>&1 
+    if [ "$?" = "0" ]; then
+      log "[Info]: starting ${bin_name} service."
+      nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box -c ${sing_confs_dir} > /dev/null 2> ${run_path}/sing-box.log &
+      echo -n $! > ${pid_file}
+      start_listen
+    else
+      log "[Error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+     fi
+  #################### CLASH ###################
+  elif [ "${bin_name}" == "clash" ]; then
+    tree_dir
+    ${bin_path} -t -d ${data_dir}/clash -f ${clash_confs} > ${run_path}/error.log
+    if [ "$?" = "0" ]; then
+      nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${clash_confs} > /dev/null 2> ${run_path}/${bin_name}.log &
+      echo -n $! > ${pid_file}
+    else
+      log "[Error]: ceks ${clash_confs}。" && exit 1
+    fi
+  #################### XRAY ###################
+  elif [ "${bin_name}" == "xray" ]; then
+    tree_dir
+    export XRAY_LOCATION_ASSET=${data_dir}/xray
+    export XRAY_LOCATION_CONFDIR=${xray_confs}
+    ${bin_path} -test > ${run_path}/error.log 2>&1
+    if [ "$?" = "0" ]; then
+      log "[Info]: starting ${bin_name} service."
+      nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
+      echo -n $! > ${pid_file}
+    else
+      log "[Error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+    fi
+  #################### V2RAY ###################
+  elif [ "${bin_name}" == "v2fly" ]; then
+    tree_dir
+    export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
+    export V2RAY_LOCATION_CONFDIR=${v2fly_confs}
+
+    ${bin_path} test > ${run_path}/error.log 2>&1
+    if [ "$?" = "0" ]; then
+      log "[Info]: starting ${bin_name} service."
+
+      nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
+      echo -n $! > ${pid_file}
+    else
+      log "[Error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+    fi
+  else
+    log "[Error]: kernel error." && exit 1
+  fi
+  #################### END ###################
+  sleep 0.5
+  rm -rf ${run_path}/error.log
+}
+
+cgroup_limit() {
+  if [ "${cgroup_memory}" == "true" ]; then
+    if ! (${scripts_dir}/box.tool cgroup); then
+      return 0
+    else
+      log "[Info]: cgroup limit: ${cgroup_memory_limit}"
+    fi
+  fi
+}
+
+display_bin_pid() {
+  if probe_bin_alive ; then
+    log "[Info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )" && return 0
+  else
+    log "[Warning]: ${bin_name} service is stopped."
+  fi
+}
+
+start_clash() {
+  rm -rf /data/adb/box/run/*.log
+  if probe_bin_alive ; then
+    log "[Warning]: ${bin_name} service masih berjalan " && exit 1
+  fi
+
+  if [ "${mode}" == "core" ]; then
+    mkdir -p /dev/net
+    [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
+  fi
+
+  echo $(date) >> ${logs_file}
+  if [ ! -f ${bin_path} ]; then
+    log "[Info]: kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory" && exit 1
+  fi
+
+  chown 0:3005 ${bin_path}
+  chmod 0700 ${bin_path}
+  chown 0:3005 ${clash_confs}
+  chmod 0700 ${clash_confs}
+  chown 0:3005 ${data_dir}/${bin_name}/*
+  chmod 0700 ${data_dir}/${bin_name}/*
+
+  # setcap has been deprecated as it does not support binary outside of the /system/bin directory
+  #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
+
+  if [ "${bin_name}" == "clash" ]; then
+    log "[Info]: konfigurasi ${clash_confs}。"
+    nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
+    ${busybox_path} crontab -c ${run_path} -r
+    touch ${run_path}/root && chmod 0600 ${run_path}/root
+    if ! (${bin_path} -v >> ${logs_file}); then
+      log "[Error]: kernel ${bin_name} corrupted" && exit 1
+    fi
+    crontab_geo
+  else
+    if ! (${bin_path} version >> ${logs_file}); then
+      log "[Error]: kernel ${bin_name} corrupted" && exit 1
+    fi
+  fi
+
+  ipv6
+  run_box
+  cgroup_limit
+  detected_port
+  display_bin_pid
+}
+
+stop_clash() {
+  cronkill=$(ps -ef | grep root | grep "crond -c /data/adb/box/" | ${busybox_path} awk '{ print $2 }' | sort -u)
+  for cron in ${cronkill[@]}; do
+     kill ${cron}
+  done
+  if (kill -15 $(pidof ${bin_name})); then
+    rm -rf ${pid_file} && rm -rf /data/adb/box/run/root
+    display_bin_pid
+  fi
+}
+
+case "$1" in
+  start)
+    stop_clash >> /dev/null 2>&1
+    start_clash
+    ;;
+  stop)
+    stop_clash
+    ;;
+  restart)
+    stop_clash
+    sleep 1
+    start_clash
+    ;;
+  status)
+    display_bin_pid
+    ;;
+  *)
+    echo "$0:  usage:  $0 {start|stop|restart|status}"
+    ;;
+esac

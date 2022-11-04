@@ -1,0 +1,30 @@
+#!/system/bin/sh
+
+scripts=$(realpath $0)
+scripts_dir=$(dirname ${scripts})
+
+service_path="/data/adb/box/scripts/box.service"
+iptables_path="/data/adb/box/scripts/box.iptables"
+run_path="/data/adb/box/run"
+
+events=$1
+monitor_dir=$2
+monitor_file=$3
+
+create_run() {
+  if [ ! -d "${run_path}" ]; then
+    mkdir -p ${run_path}
+  fi
+}
+
+service_control() {
+  if [ "${monitor_file}" = "disable" ]; then
+    if [ "${events}" = "d" ]; then
+      ${service_path} start && ${iptables_path} enable
+    elif [ "${events}" = "n" ]; then
+      ${service_path} stop && ${iptables_path} disable
+    fi
+  fi
+}
+create_run
+service_control

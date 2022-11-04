@@ -1,0 +1,7 @@
+id=box_for_magisk
+name=Box for Magisk
+version=v4.0
+versionCode=20221104
+author=t@amarin
+description=Use sing-box, clash, v2ray, xray tunnel proxy on Android devices
+updateJson=""

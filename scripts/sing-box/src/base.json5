@@ -1,0 +1,146 @@
+{
+  "log": {
+    "disabled": true,
+    "level": "error",
+    "output": "../run/output.sing-box.log",
+    "timestamp": false
+  },
+  "dns": {
+    "final": "cloudflare",
+    "strategy": "prefer_ipv4",
+    "disable_cache": false,
+    "disable_expire": false,
+    "servers": [
+      {
+        "tag": "cloudflare",
+        "address": "https://1.1.1.1/dns-query",
+        "detour": "sing-box"
+      },
+      {
+        "tag": "googledns",
+        "address": "https://8.8.8.8/dns-query",
+        "detour": "sing-box"
+      },
+      {
+        "tag": "proxyServerNameServer",
+        "address": "tcp://8.8.8.8",
+        "detour": "direct"
+      },
+      {
+        "tag": "nxdomain",
+        "address": "RCode://name_error"
+      }
+    ],
+    "rules": []
+  },
+  "inbounds": [
+    {
+      "type": "tproxy",
+      "tag": "tproxy",
+      "listen": "::",
+      "listen_port": 9353,
+      "network": [
+        "udp",
+        "tcp"
+      ],
+      "tcp_fast_open": true,
+      "sniff": true,
+      "sniff_override_destination": true,
+      "sniff_timeout": "300ms",
+      "domain_strategy": "prefer_ipv4",
+      "udp_timeout": 300
+    },
+    {
+      "type": "tun",
+      "tag": "tun",
+      "interface_name": "tun0",
+      "inet4_address": "172.19.0.1/28",
+      "inet6_address": "fdfe:dcba:9876::1/126",
+      "mtu": 30000,
+      "stack": "system",
+      "auto_route": false,
+      "strict_route": false,
+      "sniff": true,
+      "sniff_override_destination": true,
+      "domain_strategy": "prefer_ipv4"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    },
+    {
+      "type": "dns",
+      "tag": "dns"
+    },
+    {
+      "tag": "sing-box",
+      "type": "selector",
+      "outbounds": [
+        "direct",
+        "sub-box"
+      ]
+    }
+    /*
+    {
+      "tag": "dns-server",
+      "type": "selector",
+      "outbounds": [
+        "direct"
+      ],
+      "default": "direct"
+    },
+    */
+  ],
+  "route": {
+    "final": "sing-box",
+    "geoip": {
+      "download_url": "https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db",
+      "download_detour": "sub-box"
+    },
+    "geosite": {
+      "download_url": "https://github.com/CHIZI-0618/v2ray-rules-dat/raw/release/geosite.db",
+      "download_detour": "sub-box"
+    },
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "dns"
+      },
+      {
+        "domain_suffix": ["googlesyndication.com"],
+        "outbound": "sub-box"
+      },
+      {
+        "geosite": ["category-ads-all"],
+        "outbound": "block"
+      },
+      {
+        "port": 123,
+        "outbound": "direct"
+      },
+      {
+        "network": "tcp",
+        "port_range": ["5228:5230"],
+        "outbound": "direct"
+      }
+    ],
+    "find_process": false,
+    "auto_detect_interface": false,
+    "override_android_vpn": false,
+    "default_interface": ""
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:9090",
+      "external_ui": "../dashboard/dist",
+      "secret": "",
+      "store_selected": true
+    }
+  }
+}
