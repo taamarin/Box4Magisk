@@ -1,0 +1,42 @@
+{
+  "routing": {
+    "domainStrategy": "IPIfNonMatch", //AsIs //IPIfNonMatch
+    "domainMatcher": "mph",
+    "rules": [
+      {
+        "type": "field",
+        "port": 53,
+        "inboundTag": [
+          "proxy-in"
+        ],
+        "outboundTag": "dns-out"
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "protocol": [
+          "bittorrent"
+        ]
+      },
+      {
+        "domains": [
+          "regexp:\\.googlesyndication.*\\.com$"
+        ],
+        "outboundTag": "proxy",
+        "type": "field"
+      },
+      {
+        "domains": [
+          "geosite:category-ads-all"
+        ],
+        "outboundTag": "block",
+        "type": "field"
+      },
+      {
+        "network": "tcp,udp",
+        "outboundTag": "proxy",
+        "type": "field"
+      }
+    ]
+  }
+}
