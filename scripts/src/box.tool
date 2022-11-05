@@ -7,17 +7,17 @@ source /data/adb/box/settings.ini
 
 logs() {
   export TZ=Asia/Jakarta
-  echo -n "$(date '+%Y-%m-%d %H:%M') $*" | tee -a ${logs_file}
+  echo -n "$(date '+%Y-%m-%d %H:%M') $*" | tee -a ${logs_file} > /dev/null 2>&1
 }
 
 restart_clash() {
-  ${scripts_dir}/box.service restart
+  ${scripts_dir}/box.service start
   sleep 0.75
-  ${scripts_dir}/box.iptables renew
+  ${scripts_dir}/box.iptables enable
   if [ "$?" == "0" ]; then
-    log "[Info]: `date` ${bin_name} restart" >>${logs_file}
+    log "[info]: `date` ${bin_name} restart" >>${logs_file}
   else
-    log "[Error]: ${bin_name} failed to restart." >>${logs_file}
+    log "[error]: ${bin_name} failed to restart." >>${logs_file}
   fi
 }
 
@@ -72,10 +72,10 @@ port_detection() {
   if (ss -h > /dev/null 2>&1); then
     port=$(ss -antup | grep "$bin_name" | ${busybox_path} awk '$7~/'pid=$(pidof ${bix_bin_name})*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
   else
-    log "[Info]: skip port detected"
+    log "[info]: skip port detected"
     exit 0
   fi
-  logs "[Info]: port detected: "
+  logs "[info]: port detected: "
   for sub_port in ${port[@]} ; do
     sleep 0.5
     echo -n "${sub_port} / " >> ${logs_file}
@@ -103,13 +103,13 @@ update_kernel() {
           if ! (rm -rf ${data_dir}/"${file_kernel}".gz.bak); then
             rm -rf ${data_dir}/"${file_kernel}".gz
           fi
-          log "[Warning]: gunzip ${file_kernel}.gz failed" 
+          log "[warning]: gunzip ${file_kernel}.gz failed" 
         fi
     else
-      log "[Error]: gunzip not found" 
+      log "[error]: gunzip not found" 
     fi
   else
-    log "[Warning]: download ${file_kernel}.gz failed" 
+    log "[warning]: download ${file_kernel}.gz failed" 
   fi
 
   mv -f ${data_dir}/"${file_kernel}" ${data_dir}/kernel/clash
@@ -119,7 +119,7 @@ update_kernel() {
   if [ -f "${pid_file}" ] && [ ${flag} == true ]; then
     restart_clash
   else
-    log "[Warning]: ${bin_name} tidak dimulai ulang"
+    log "[warning]: ${bin_name} tidak dimulai ulang"
   fi
 }
 
@@ -133,9 +133,9 @@ cgroup_limit() {
 
   mkdir -p "${cgroup_memory_path}/${bin_name}"
   echo $(cat ${pid_file}) > "${cgroup_memory_path}/${bin_name}/cgroup.procs" \
-  && log "[Info]: ${cgroup_memory_path}/${bin_name}/cgroup.procs"  
+  && log "[info]: ${cgroup_memory_path}/${bin_name}/cgroup.procs"  
   echo "${cgroup_memory_limit}" > "${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes" \
-  && log "[Info]: ${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes"
+  && log "[info]: ${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes"
 }
 
 up_dashboard() {

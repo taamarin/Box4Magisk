@@ -12,12 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Run build.sh
+      - name: run build.sh
         run: sh build.sh
 
-      - name: Upload release
+      - name: upload release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          files: box4magisk_v*.zip
+          files: box_for_magisk-v*.zip
           generate_release_notes: true

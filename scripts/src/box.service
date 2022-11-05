@@ -51,20 +51,20 @@ wait_bin_listen() {
 crontab_geo() {
   if [ ! "${update_interval}" == "false" ]; then
     echo "${update_interval} ${scripts_dir}/box.tool subgeo" >> ${run_path}/root \
-    && log "[Info]: crontab geo and subscription (${update_interval})。"
-    log "[Info]: geox (${auto_updateGeoX})。"
-    log "[Info]: subscription (${auto_updateSubcript})。"
+    && log "[info]: crontab geo and subscription (${update_interval})。"
+    log "[info]: geox (${auto_updategeox})。"
+    log "[info]: subscription (${auto_updateSubcript})。"
   else
-    log "[Info]: crontab geox & subscription is disable"
+    log "[info]: crontab geox & subscription is disable"
   fi
 }
 
 start_listen() {
   if ! wait_bin_listen; then
     if probe_bin_alive ; then
-    log "[Error]: ${bin_name} service is running but may not listening"
+    log "[error]: ${bin_name} service is running but may not listening"
     else
-      log "[Error]: listen, ${bin_name} port is not detected  "
+      log "[error]: listen, ${bin_name} port is not detected  "
       kill `cat ${pid_file}`
       rm -f ${pid_file} && exit 1
     fi
@@ -78,7 +78,7 @@ detected_port() {
       exit 0
     fi
   else
-    log "[Info]: skip!!!! port detected。"
+    log "[info]: skip!!!! port detected。"
   fi
 }
 
@@ -88,9 +88,10 @@ tree_dir() {
     ${termux_bin}/tree -a ${data_dir}/${bin_name} > ${run_path}/tree.log 2>&1
     ${busybox_path} awk '/./' ${run_path}/tree.log > ${run_path}/tree.logs
     while read p ; do
-      log "[Info]:" "$p"
+      log "[info]:" "$p"
     done <${run_path}/tree.logs
-    rm -rf ${run_path}/tree.logs && rm -rf ${run_path}/tree.log
+    rm -rf ${run_path}/tree.logs
+    rm -rf ${run_path}/tree.log
   fi
 }
 
@@ -101,12 +102,12 @@ run_box() {
     tree_dir
     ${bin_path} check -D ${data_dir}/sing-box -c ${sing_confs_dir} > ${run_path}/error.log 2>&1 
     if [ "$?" = "0" ]; then
-      log "[Info]: starting ${bin_name} service."
+      log "[info]: starting ${bin_name} service."
       nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box -c ${sing_confs_dir} > /dev/null 2> ${run_path}/sing-box.log &
       echo -n $! > ${pid_file}
       start_listen
     else
-      log "[Error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+      log "[error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
      fi
   #################### CLASH ###################
   elif [ "${bin_name}" == "clash" ]; then
@@ -116,7 +117,7 @@ run_box() {
       nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${clash_confs} > /dev/null 2> ${run_path}/${bin_name}.log &
       echo -n $! > ${pid_file}
     else
-      log "[Error]: ceks ${clash_confs}。" && exit 1
+      log "[error]: ceks ${clash_confs}。" && exit 1
     fi
   #################### XRAY ###################
   elif [ "${bin_name}" == "xray" ]; then
@@ -125,11 +126,11 @@ run_box() {
     export XRAY_LOCATION_CONFDIR=${xray_confs}
     ${bin_path} -test > ${run_path}/error.log 2>&1
     if [ "$?" = "0" ]; then
-      log "[Info]: starting ${bin_name} service."
+      log "[info]: starting ${bin_name} service."
       nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
       echo -n $! > ${pid_file}
     else
-      log "[Error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+      log "[error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
     fi
   #################### V2RAY ###################
   elif [ "${bin_name}" == "v2fly" ]; then
@@ -139,15 +140,15 @@ run_box() {
 
     ${bin_path} test > ${run_path}/error.log 2>&1
     if [ "$?" = "0" ]; then
-      log "[Info]: starting ${bin_name} service."
+      log "[info]: starting ${bin_name} service."
 
       nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
       echo -n $! > ${pid_file}
     else
-      log "[Error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+      log "[error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
     fi
   else
-    log "[Error]: kernel error." && exit 1
+    log "[error]: kernel error." && exit 1
   fi
   #################### END ###################
   sleep 0.5
@@ -159,33 +160,31 @@ cgroup_limit() {
     if ! (${scripts_dir}/box.tool cgroup); then
       return 0
     else
-      log "[Info]: cgroup limit: ${cgroup_memory_limit}"
+      log "[info]: cgroup limit: ${cgroup_memory_limit}"
     fi
   fi
 }
 
 display_bin_pid() {
   if probe_bin_alive ; then
-    log "[Info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )" && return 0
+    log "[info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )" && return 0
   else
-    log "[Warning]: ${bin_name} service is stopped."
+    log "[warning]: ${bin_name} service is stopped."
   fi
 }
 
-start_clash() {
-  rm -rf /data/adb/box/run/*.log
+start_box() {
+  echo -n "" > ${logs_file}
   if probe_bin_alive ; then
-    log "[Warning]: ${bin_name} service masih berjalan " && exit 1
+    log "[warning]: ${bin_name} service masih berjalan " && exit 1
   fi
 
-  if [ "${mode}" == "core" ]; then
-    mkdir -p /dev/net
-    [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-  fi
+  mkdir -p /dev/net
+  [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
 
   echo $(date) >> ${logs_file}
   if [ ! -f ${bin_path} ]; then
-    log "[Info]: kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory" && exit 1
+    log "[info]: kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory" && exit 1
   fi
 
   chown 0:3005 ${bin_path}
@@ -199,17 +198,17 @@ start_clash() {
   #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
 
   if [ "${bin_name}" == "clash" ]; then
-    log "[Info]: konfigurasi ${clash_confs}。"
     nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
     ${busybox_path} crontab -c ${run_path} -r
     touch ${run_path}/root && chmod 0600 ${run_path}/root
     if ! (${bin_path} -v >> ${logs_file}); then
-      log "[Error]: kernel ${bin_name} corrupted" && exit 1
+      log "[error]: kernel ${bin_name} corrupted" && exit 1
     fi
+    log "[info]: konfigurasi ${clash_confs}。"
     crontab_geo
   else
     if ! (${bin_path} version >> ${logs_file}); then
-      log "[Error]: kernel ${bin_name} corrupted" && exit 1
+      log "[error]: kernel ${bin_name} corrupted" && exit 1
     fi
   fi
 
@@ -220,34 +219,29 @@ start_clash() {
   display_bin_pid
 }
 
-stop_clash() {
+stop_box() {
   cronkill=$(ps -ef | grep root | grep "crond -c /data/adb/box/" | ${busybox_path} awk '{ print $2 }' | sort -u)
   for cron in ${cronkill[@]}; do
      kill ${cron}
   done
   if (kill -15 $(pidof ${bin_name})); then
-    rm -rf ${pid_file} && rm -rf /data/adb/box/run/root
+    rm -rf ${pid_file}
     display_bin_pid
   fi
 }
 
 case "$1" in
   start)
-    stop_clash >> /dev/null 2>&1
-    start_clash
+    stop_box
+    start_box
     ;;
   stop)
-    stop_clash
-    ;;
-  restart)
-    stop_clash
-    sleep 1
-    start_clash
+    stop_box
     ;;
   status)
     display_bin_pid
     ;;
   *)
-    echo "$0:  usage:  $0 {start|stop|restart|status}"
+    echo "$0:  usage:  $0 {start|stop|status}"
     ;;
 esac
