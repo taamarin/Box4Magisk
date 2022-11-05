@@ -7,7 +7,7 @@ source /data/adb/box/settings.ini
 
 logs() {
   export TZ=Asia/Jakarta
-  echo -n "$(date '+%Y-%m-%d %H:%M') $*" | tee -a ${logs_file} > /dev/null 2>&1
+  echo -n "$(date '+%H:%M %z') $*" | tee -a ${logs_file} > /dev/null 2>&1
 }
 
 restart_clash() {

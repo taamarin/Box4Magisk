@@ -60,12 +60,12 @@ crontab_geo() {
 }
 
 start_listen() {
-  if ! wait_bin_listen; then
+  if ! wait_bin_listen ; then
     if probe_bin_alive ; then
     log "[error]: ${bin_name} service is running but may not listening"
     else
       log "[error]: listen, ${bin_name} port is not detected  "
-      kill `cat ${pid_file}`
+      kill $(cat ${pid_file})
       rm -f ${pid_file} && exit 1
     fi
   fi
@@ -75,7 +75,7 @@ detected_port() {
   sleep 1
   if [ "${port_detect}" == "true" ]; then
     if ! (${scripts_dir}/box.tool detec); then
-      exit 0
+      return 0
     fi
   else
     log "[info]: skip!!!! port detected。"
@@ -90,8 +90,7 @@ tree_dir() {
     while read p ; do
       log "[info]:" "$p"
     done <${run_path}/tree.logs
-    rm -rf ${run_path}/tree.logs
-    rm -rf ${run_path}/tree.log
+    rm -rf ${run_path}/tree.logs && rm -rf ${run_path}/tree.log
   fi
 }
 
@@ -117,7 +116,7 @@ run_box() {
       nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${clash_confs} > /dev/null 2> ${run_path}/${bin_name}.log &
       echo -n $! > ${pid_file}
     else
-      log "[error]: ceks ${clash_confs}。" && exit 1
+      log "[error]: configuration check failed, please check the ${clash_confs}。" && exit 1
     fi
   #################### XRAY ###################
   elif [ "${bin_name}" == "xray" ]; then
