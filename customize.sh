@@ -52,8 +52,15 @@ unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
 unzip -j -o "${ZIPFILE}" 'box_service.sh' -d /data/adb/service.d >&2
 tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${MODPATH}/system/bin >&2
 
+if [ ! -f "/system/etc/resolv.conf" ] ; then
+  touch ${MODPATH}/system/etc/resolv.conf
+  echo nameserver 8.8.8.8 > ${MODPATH}/system/etc/resolv.conf
+  echo nameserver 9.9.9.9 >> ${MODPATH}/system/etc/resolv.conf
+  echo nameserver 1.1.1.1 >> ${MODPATH}/system/etc/resolv.conf
+  echo nameserver 149.112.112.112 >> ${MODPATH}/system/etc/resolv.conf
+fi
+
 mv ${MODPATH}/scripts/cacert.pem ${MODPATH}/system/etc/security/cacerts
-mv ${MODPATH}/geo/* /data/adb/box/clash/
 mv ${MODPATH}/scripts/src/* /data/adb/box/scripts/
 mv ${MODPATH}/scripts/clash/* /data/adb/box/clash/
 mv ${MODPATH}/scripts/settings.ini /data/adb/box/
@@ -61,13 +68,7 @@ mv ${MODPATH}/scripts/xray/confs /data/adb/box/xray/
 mv ${MODPATH}/scripts/v2fly/confs /data/adb/box/v2fly/
 mv ${MODPATH}/scripts/sing-box /data/adb/box/
 
-cp /data/adb/box/clash/GeoIP.dat /data/adb/box/xray/geoip.dat
-cp /data/adb/box/clash/GeoSite.dat /data/adb/box/xray/geosite.dat
-cp /data/adb/box/clash/GeoIP.dat /data/adb/box/v2fly/geoip.dat
-cp /data/adb/box/clash/GeoSite.dat /data/adb/box/v2fly/geosite.dat
-
 rm -rf ${MODPATH}/scripts
-rm -rf ${MODPATH}/geo
 rm -rf ${MODPATH}/binary
 rm -rf ${MODPATH}/box_service.sh
 sleep 1
@@ -75,12 +76,10 @@ set_perm_recursive ${MODPATH} 0 0 0755 0644
 set_perm_recursive /data/adb/box/ 0 3005 0755 0644
 set_perm_recursive /data/adb/box/scripts/ 0 3005 0755 0700
 set_perm_recursive /data/adb/box/dashboard/ 0 3005 0755 0700
-
+set_perm  /data/adb/service.d/box_service.sh  0  0  0755
 set_perm  ${MODPATH}/service.sh  0  0  0755
 set_perm  ${MODPATH}/uninstall.sh  0  0  0755
 set_perm  ${MODPATH}/system/etc/security/cacerts/cacert.pem 0 0 0644
-set_perm  /data/adb/service.d/box_service.sh  0  0  0755
-
 chmod ugo+x ${MODPATH}/system/bin/*
 chmod ugo+x /data/adb/box/scripts/*
 ui_print "- Installation is complete, reboot your device"

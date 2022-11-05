@@ -36,7 +36,7 @@ start_redirect() {
     #    ${iptables} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${redir_port}
   fi
 
-  for subnet in ${internet[@]} ; do
+  for subnet in ${intranet[@]} ; do
     ${iptables} -t nat -A BOX_EXTERNAL -d ${subnet} -j RETURN
     ${iptables} -t nat -A BOX_LOCAL -d ${subnet} -j RETURN
   done
@@ -50,7 +50,6 @@ start_redirect() {
   ${iptables} -t nat -I PREROUTING -j BOX_EXTERNAL
 
   ${iptables} -t nat -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-
   for ignore in ${ignore_out_list[@]} ; do
     ${iptables} -t nat -I BOX_LOCAL -o ${ignore} -j RETURN
   done
@@ -80,7 +79,6 @@ start_redirect() {
   fi
 
   ${iptables} -t nat -I OUTPUT -j BOX_LOCAL
-
   ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
 }
 
@@ -88,7 +86,6 @@ stop_redirect() {
   ${iptables} -t nat -D PREROUTING -j BOX_EXTERNAL
 
   ${iptables} -t nat -D OUTPUT -j BOX_LOCAL
-
   ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
 
   ${iptables} -t nat -F BOX_EXTERNAL
@@ -113,13 +110,13 @@ start_tproxy() {
   ${iptables} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
   ${iptables} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
 
-  # Bypass internet
+  # Bypass intranet
   if [ "${bin_name}" == "clash" ] ; then
-    for subnet in ${internet[@]} ; do
+    for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
     done
   else
-    for subnet in ${internet[@]} ; do
+    for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
     done
@@ -146,13 +143,13 @@ start_tproxy() {
     ${iptables} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
   done
 
-  # Bypass internet
+  # Bypass intranet
   if [ "${bin_name}" == "clash" ] ; then
-    for subnet in ${internet[@]} ; do
+    for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
     done
   else
-    for subnet in ${internet[@]} ; do
+    for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
     done
@@ -160,9 +157,7 @@ start_tproxy() {
 
   # Bypass box itself
   ${iptables} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-
   # ${iptables} -t mangle -I BOX_LOCAL -j RETURN -m mark --mark ${routing_mark}
-
   # Disable kernel
   # ${iptables} -t mangle -A BOX_LOCAL -m owner ! --uid 0-99999999 -j DROP
 
@@ -205,7 +200,6 @@ start_tproxy() {
 
   ${iptables} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
 
-
   # This rule blocks local access to tproxy-port to prevent traffic loopback.
   ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
 
@@ -218,12 +212,9 @@ start_tproxy() {
 
     ${iptables} -t nat -I PREROUTING -j CLASH_DNS_EXTERNAL
 
-
     ${iptables} -t nat -N CLASH_DNS_LOCAL
     ${iptables} -t nat -F CLASH_DNS_LOCAL
-
     ${iptables} -t nat -A CLASH_DNS_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-
     ${iptables} -t nat -A CLASH_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
 
     ${iptables} -t nat -I OUTPUT -j CLASH_DNS_LOCAL
@@ -275,7 +266,7 @@ if [ "${proxy_mode}" != "core" ] ; then
     enable)
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
-      sleep 0.75
+      sleep 1
       find_packages_uid
       if [ "${network_mode}" = "UDP" ] ; then
         if (zcat /proc/config.gz | grep -q TPROXY) ; then
@@ -309,7 +300,7 @@ if [ "${proxy_mode}" != "core" ] ; then
       stop_redirect >> /dev/null 2>&1
       forward -D
       log "[Warning]: clean up iptables transparent proxy rules done."
-      sleep 0.75
+      sleep 1
       find_packages_uid
       if [ "${network_mode}" = "UDP" ] ; then
         if (zcat /proc/config.gz | grep -q TPROXY) ; then
@@ -331,12 +322,25 @@ if [ "${proxy_mode}" != "core" ] ; then
       fi
       ;;
     *)
-      echo "$0:  usage: $0 {enable|disable|renew}"
+      echo "$0:  usage:  $0 {enable|disable|renew}"
       ;;
   esac
 else
-  stop_tproxy >> /dev/null 2>&1
-  stop_redirect >> /dev/null 2>&1
-  forward -I
-  log "[Info]: proxy_mode: ${proxy_mode} disable transparent proxy."
+  case "$1" in
+    enable)
+      stop_tproxy >> /dev/null 2>&1
+      stop_redirect >> /dev/null 2>&1
+      forward -I
+      log "[Info]: proxy_mode: ${proxy_mode} disable transparent proxy."
+      ;;
+    disable)
+      stop_tproxy >> /dev/null 2>&1
+      stop_redirect >> /dev/null 2>&1
+      forward -D
+      log "[Warning]: cleaning up proxy rules."
+      ;;
+    *)
+      echo "$0:  usage: $0 {enable|disable|renew}"
+      ;;
+  esac
 fi

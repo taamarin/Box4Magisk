@@ -41,14 +41,14 @@ update_file() {
 }
 
 auto_update() {
-  if [ "${auto_updateGeoX}" == "true" ]; then
+  if [ "${auto_updategeox}" == "true" ]; then
    update_file ${geoip_file} ${geoip_url}
    if [ "$?" = "0" ]; then
     flag=false
    fi
   fi
 
-  if [ "${auto_updateGeoX}" == "true" ]; then
+  if [ "${auto_updategeox}" == "true" ]; then
    update_file ${geosite_file} ${geosite_url}
    if [ "$?" = "0" ]; then
     flag=false
@@ -84,9 +84,16 @@ port_detection() {
 }
 
 update_kernel() {
-  tag_meta=$(curl -fsSL ${url_download}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
-  filename="${file_kernel}-${platform}-${arch}-${tag_meta}"
-  update_file ${data_dir}/${file_kernel}.gz ${url_download}/download/${tag}/${filename}.gz
+  arch="arm64"
+  platform="android"
+  file_kernel="clash.${arch}"
+  tag="Prerelease-alpha-next"
+  tag_name="alpha-next-[0-9,a-z]+"
+  url_meta="https://github.com/taamarin/Clash.Meta/releases"
+
+  tag_meta=$(curl -fsSL ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
+  filename="Clash.Meta-${platform}-${arch}-${tag_meta}"
+  update_file ${data_dir}/${file_kernel}.gz ${url_meta}/download/${tag}/${filename}.gz
   if [ "$?" = "0" ]; then
     flag=false
   fi
@@ -160,6 +167,6 @@ case "$1" in
     up_dashboard
     ;;
   *)
-    echo "$0:  usage:  $0 {dashboard|kernel|cgroup|detection|update}"
+    echo "$0:  usage:  $0 {upyacd|upcore|cgroup|detec|subgeo}"
     ;;
 esac
