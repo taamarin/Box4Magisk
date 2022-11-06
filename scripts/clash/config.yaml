@@ -1,27 +1,28 @@
-tproxy-port: 0
+tproxy-port: 9353
+redir-port: 9454
 mode: rule
 allow-lan: true
 unified-delay: true
 bind-address: '*'
-log-level: warning
-ipv6: false
+log-level: error
+ipv6: true
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: ../dashboard/dist
-tcp-concurrent: true
-interface-name: ""
+tcp-concurrent: false
+# interface-name: ""
 enable-process: false
 geodata-loader: memconservative
 # routing-mark: 233
-inbound-tfo: true
+inbound-tfo: false
 secret: ""
-geox-url: {mmdb: "", geoip: "https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
+geox-url: {mmdb: "", geoip: "", geosite: ""}
 profile:
   store-selected: true
   store-fake-ip: false
 experimental: {sniff-tls-sni: true, fingerprint: ""}
 sniffer:
-  enable: false
+  enable: true
   sniffing: [tls, http]
   force-domain:
     - '+'
@@ -34,32 +35,32 @@ hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1
 tun:
   enable: true
   device: tun0
-  stack: gvisor
+  stack: system
+  mtu: 9000
   dns-hijack:
     - any:53
   auto-route: true
   auto-detect-interface: true
   strict_route: false
+  inet4_address: 198.18.0.1/16
+  inet6_address: [fdfe:dcba:9876::1/126]
 dns:
   enable: true
-  ipv6: true
+  ipv6: false
   prefer-h3: false
   default-nameserver:
-    - 'tls://8.8.8.8' # Google
     - 'tcp://1.0.0.1' # Cloudflare
-    - 'tcp://112.215.230.254:853#REJECT'
-  listen: "0.0.0.0:1053"
+  listen: 0.0.0.0:1053
   use-hosts: true
-  enhanced-mode: fake-ip
-  fake-ip-range: "28.0.0.1/8"
+  enhanced-mode: redir-host
+  fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ["*.local", "*.localhost"]
   nameserver:
-    - 'https://1.1.1.1' # Cloudflare
-    - 'https://8.8.8.8' # Google
-  fallback:
-    - 'tcp://1.0.0.1' # Cloudflare
-    - 'tcp://8.8.4.4' # Google
-    - 'tcp://9.9.9.9' # Quad9
+    - 'https://1.1.1.1/dns-query' # Cloudflare
+    - 'https://8.8.8.8/dns-query' # Google
+  proxy-server-nameserver:
+    - 'https://dns.google/dns-query'
+  fallback: []
   fallback-filter:
     geoip: false
     geoip-code: "ID"

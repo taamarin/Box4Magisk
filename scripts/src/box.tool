@@ -55,7 +55,7 @@ auto_update() {
    fi
   fi
 
-  if [ ${auto_updateSubcript} == "true" ]; then
+  if [ ${auto_updatesubcript} == "true" ]; then
    update_file ${config_file} ${subcript_url}
    if [ "$?" = "0" ]; then
     flag=true

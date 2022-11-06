@@ -53,7 +53,7 @@ crontab_geo() {
     echo "${update_interval} ${scripts_dir}/box.tool subgeo" >> ${run_path}/root \
     && log "[info]: crontab geo and subscription (${update_interval})。"
     log "[info]: geox (${auto_updategeox})。"
-    log "[info]: subscription (${auto_updateSubcript})。"
+    log "[info]: subscription (${auto_updatesubcript})。"
   else
     log "[info]: crontab geox & subscription is disable"
   fi
@@ -172,8 +172,19 @@ display_bin_pid() {
   fi
 }
 
+yq() {
+# ${box_path}/bin/yq -i ".tproxy-port=${tproxy_port}" ${box_path}/clash/config.yaml
+# ${box_path}/bin/yq -i ".dns.listen=\"${clash_dns_listen}\"" ${box_path}/clash/config.yaml
+# ${box_path}/bin/yq -i ".dns.fake-ip-range=\"${clash_fake_ip_range}\"" ${box_path}/clash/config.yaml
+# ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type == \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_confs_dir}
+}
+
 start_box() {
   echo -n "" > ${logs_file}
+  rm -rf /data/adb/box/run/sing-box.log
+  rm -rf /data/adb/box/run/clash.log
+  rm -rf /data/adb/box/run/root
+
   if probe_bin_alive ; then
     log "[warning]: ${bin_name} service masih berjalan " && exit 1
   fi
