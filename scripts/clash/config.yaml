@@ -9,20 +9,20 @@ ipv6: true
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: ../dashboard/dist
-tcp-concurrent: false
-# interface-name: ""
+tcp-concurrent: true
 enable-process: false
 geodata-loader: memconservative
+inbound-tfo: true
+interface-name: ""
+# secret: ""
 # routing-mark: 233
-inbound-tfo: false
-secret: ""
-geox-url: {mmdb: "", geoip: "", geosite: ""}
+# geox-url: {mmdb: "", geoip: "", geosite: ""}
 profile:
   store-selected: true
   store-fake-ip: false
 experimental: {sniff-tls-sni: true, fingerprint: ""}
 sniffer:
-  enable: true
+  enable: false
   sniffing: [tls, http]
   force-domain:
     - '+'
@@ -35,49 +35,52 @@ hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1
 tun:
   enable: true
   device: tun0
-  stack: system
-  mtu: 9000
+  stack: system # gvisor / lwip
   dns-hijack:
     - any:53
   auto-route: true
   auto-detect-interface: true
-  strict_route: false
-  inet4_address: 198.18.0.1/16
-  inet6_address: [fdfe:dcba:9876::1/126]
+  mtu: 9000 # 最大传输单元
+  strict_route: true
+  inet4_route_address:
+    - 0.0.0.0/1
+    - 128.0.0.0/1
+  inet6_route_address:
+    - '::/1'
+    - '8000::/1'
 dns:
   enable: true
-  ipv6: false
+  ipv6: true
   prefer-h3: false
   default-nameserver:
-    - 'tcp://1.0.0.1' # Cloudflare
+    - 'tcp://8.8.8.8' # googledns
+    - 'tcp://1.1.1.1' # cloudflare
+    - 'https://112.215.248.124:853#REJECT'
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: redir-host
-  fake-ip-range: 198.18.0.1/16
+  fake-ip-range: 28.0.0.1/8
   fake-ip-filter: ["*.local", "*.localhost"]
   nameserver:
-    - 'https://1.1.1.1/dns-query' # Cloudflare
-    - 'https://8.8.8.8/dns-query' # Google
-  proxy-server-nameserver:
-    - 'https://dns.google/dns-query'
-  fallback: []
-  fallback-filter:
-    geoip: false
-    geoip-code: "ID"
-    geosite: []
-    ipcidr: [0.0.0.0/8, 10.0.0.0/8]
-    domain: ['+.google.com', '+.youtube.com']
+    - https://dns.cloudflare.com/dns-query
+    - tls://dns.google
+  # fallback-filter:
+  #   geoip: true
+  #   geoip-code: ID
+  #   geosite:
+  #     - gfw
+  #   ipcidr:
+  #     - 240.0.0.0/4
+  #   domain:
+  #     - '+.google.com'
+  #     - '+.facebook.com'
+  #     - '+.youtube.com'
 proxies:
 proxy-groups:
   - name: "llycoris"
     type: select
     use: [
-        🌸,🌼
-    ]
-  - name: "✘ has been banned" 
-    type: select
-    proxies: [
-        REJECT,DIRECT
+        🌸
     ]
 proxy-providers:
   🌸:
@@ -87,18 +90,9 @@ proxy-providers:
       enable: true
       url: http://cp.cloudflare.com/generate_204
       interval: 1200
-  🌼:
-    type: file
-    path: ./assets/llycoris1.list
-    health-check:
-      enable: true
-      url: http://cp.cloudflare.com/generate_204
-      interval: 1200
 rules:
   - DOMAIN-SUFFIX,googlesyndication.com,llycoris
-  - AND,((GEOSITE,YOUTUBE),(NETWORK,UDP)),REJECT
   - AND,((DST-PORT,5228-5230),(NETWORK,TCP)),DIRECT
-  - GEOSITE,CATEGORY-ADS-ALL,✘ has been banned
-  - IP-CIDR,198.18.0.1/16,DIRECT,no-resolve
-  - IP-CIDR,127.0.0.1/32,DIRECT,no-resolve
+  - GEOSITE,CATEGORY-ADS-ALL,REJECT
+  - GEOIP,PRIVATE,REJECT
   - MATCH,llycoris
