@@ -15,7 +15,7 @@ restart_clash() {
   sleep 0.75
   ${scripts_dir}/box.iptables enable
   if [ "$?" == "0" ]; then
-    log "[info]: `date` ${bin_name} restart" >>${logs_file}
+    log "[info]: $(date) ${bin_name} restart" >>${logs_file}
   else
     log "[error]: ${bin_name} failed to restart." >>${logs_file}
   fi
@@ -40,30 +40,41 @@ update_file() {
   fi
 }
 
-auto_update() {
-  if [ "${auto_updategeox}" == "true" ]; then
-   update_file ${geoip_file} ${geoip_url}
-   if [ "$?" = "0" ]; then
-    flag=false
-   fi
+update_subgeo() {
+  if [ "${bin_name}" == "clash" ]; then
+    geoip_file="${data_dir}/clash/GeoIP.dat"
+    geoip_url="https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat"
+    geosite_file="${data_dir}/clash/GeoSite.dat"
+    geosite_url="https://github.com/CHIZI-0618/v2ray-rules-dat/raw/release/geosite.dat"
+  elif [ "${bin_name}" == "sing-box" ]; then
+    geoip_file="${data_dir}/sing-box/geoip.db"
+    geoip_url="https://github.com/SagerNet/sing-geoip/releases/download/20221012/geoip-cn.db"
+    geosite_file="${data_dir}/sing-box/geosite.db"
+    geosite_url="https://github.com/CHIZI-0618/v2ray-rules-dat/raw/release/geosite.db"
+  else
+    geoip_file="${data_dir}/${bin_name}/geoip.dat"
+    geoip_url="https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat"
+    geosite_file="${data_dir}/${bin_name}/geosite.dat"
+    geosite_url="https://github.com/CHIZI-0618/v2ray-rules-dat/raw/release/geosite.dat"
   fi
 
   if [ "${auto_updategeox}" == "true" ]; then
-   update_file ${geosite_file} ${geosite_url}
-   if [ "$?" = "0" ]; then
-    flag=false
-   fi
+    update_file ${geoip_file} ${geoip_url}
+    update_file ${geosite_file} ${geosite_url}
+    if [ "$?" = "0" ]; then
+      flag=false
+    fi
   fi
 
   if [ ${auto_updatesubcript} == "true" ]; then
-   update_file ${config_file} ${subcript_url}
-   if [ "$?" = "0" ]; then
-    flag=true
-   fi
+    update_file ${config_file} ${subcript_url}
+    if [ "$?" = "0" ]; then
+      flag=true
+    fi
   fi
 
   if [ -f "${pid_file}" ] && [ ${flag} == true ]; then
-  restart_clash
+    restart_clash
   fi
 }
 
@@ -99,12 +110,12 @@ update_kernel() {
   fi
   if [ ${flag} == false ]; then
     if (gunzip --help > /dev/null 2>&1); then
-        if ! (gunzip ${data_dir}/"${file_kernel}".gz); then
-          if ! (rm -rf ${data_dir}/"${file_kernel}".gz.bak); then
-            rm -rf ${data_dir}/"${file_kernel}".gz
-          fi
-          log "[warning]: gunzip ${file_kernel}.gz failed" 
+      if ! (gunzip ${data_dir}/"${file_kernel}".gz); then
+        if ! (rm -rf ${data_dir}/"${file_kernel}".gz.bak); then
+          rm -rf ${data_dir}/"${file_kernel}".gz
         fi
+        log "[warning]: gunzip ${file_kernel}.gz failed" 
+      fi
     else
       log "[error]: gunzip not found" 
     fi
@@ -112,7 +123,7 @@ update_kernel() {
     log "[warning]: download ${file_kernel}.gz failed" 
   fi
 
-  mv -f ${data_dir}/"${file_kernel}" ${data_dir}/kernel/clash
+  mv -f ${data_dir}/${file_kernel} ${data_dir}/kernel/clash
   if [ "$?" = "0" ]; then
     flag=true
   fi
@@ -138,7 +149,7 @@ cgroup_limit() {
   && log "[info]: ${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes"
 }
 
-up_dashboard() {
+update_dashboard() {
   url_dashboard="https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip"
   file_dasboard="${data_dir}/dashboard.zip"
   rm -rf ${data_dir}/dashboard/dist
@@ -150,7 +161,7 @@ up_dashboard() {
 
 case "$1" in
   subgeo)
-    auto_update
+    update_subgeo
     rm -rf ${data_dir}/${bin_name}/*.bak
     exit 1
     ;;
@@ -164,7 +175,7 @@ case "$1" in
     update_kernel
     ;;
   upyacd)
-    up_dashboard
+    update_dashboard
     ;;
   *)
     echo "$0:  usage:  $0 {upyacd|upcore|cgroup|detec|subgeo}"
