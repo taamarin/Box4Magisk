@@ -1,4 +1,2 @@
-## ⟳ Changelog v4.1
+#### ⟳ Changelog v4.2
 - optimization and improvement
-- clean up
-- default setting Clash, mode: MIXED

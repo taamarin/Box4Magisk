@@ -196,7 +196,7 @@ start_box() {
   chown 0:3005 ${clash_confs}
   chmod 0700 ${clash_confs}
   chown 0:3005 ${data_dir}/${bin_name}/*
-  chmod 0700 ${data_dir}/${bin_name}/*
+  chmod 0755 ${data_dir}/${bin_name}/*
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
   #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
 
@@ -234,11 +234,11 @@ stop_box() {
 
 case "$1" in
   start)
-    stop_box >> /dev/null 2>&1
-    start_box
+    time stop_box >> /dev/null 2>&1
+    time start_box
     ;;
   stop)
-    stop_box
+    time stop_box
     ;;
   status)
     display_bin_pid
