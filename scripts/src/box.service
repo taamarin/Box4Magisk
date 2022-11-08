@@ -93,6 +93,28 @@ tree_dir() {
   fi
 }
 
+temporary_config_file() {
+  sed -i '/^[  ]*$/d' ${clash_template}
+  if [ -f "${clash_template}" ]; then
+    if [ -f "${clash_confs}" ]; then
+      cp -f ${clash_template} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
+      sed -n -E '/^proxies:$/,$p' ${clash_confs} >> ${temporary_config_file}.swp
+      sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
+    else
+      log "[error]: ${clash_confs} file is missing!!!" && exit 1
+    fi
+  else
+    log "[error]: ${clash_template} file is missing !!!" && exit 1
+  fi
+
+  mv ${temporary_config_file}.swp ${temporary_config_file} \
+  && log "[info]: merge config clash Succes" || log "[error]: merge config failed!!!"
+
+  if [ ! -f "${temporary_config_file}" ]; then
+     log "[error]: ${temporary_config_file} file is missing !!!" && exit 1
+  fi
+}
+
 run_box() {
   ulimit -SHn 1000000
   case "${bin_name}" in
@@ -110,15 +132,17 @@ run_box() {
       ;;
     clash)
       tree_dir
+      temporary_config_file
       if [ "${clash_tun_status}" == "true" ]; then
         sed -i 's/network_mode=.*/network_mode="MIXED"/' /data/adb/box/settings.ini
       else
         sed -i 's/network_mode=.*/network_mode="UDP"/' /data/adb/box/settings.ini
       fi
-      if ${bin_path} -t -d ${data_dir}/clash -f ${clash_confs} > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${clash_confs} > /dev/null 2> ${run_path}/${bin_name}.log &
+      if ${bin_path} -t -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/error.log ; then
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
+        mv ${temporary_config_file} ${clash_confs}
         log "[error]: configuration check failed, please check the ${clash_confs}。" && exit 1
       fi
       ;;
@@ -196,7 +220,7 @@ start_box() {
   chown 0:3005 ${clash_confs}
   chmod 0700 ${clash_confs}
   chown 0:3005 ${data_dir}/${bin_name}/*
-  chmod 0755 ${data_dir}/${bin_name}/*
+  chmod 0700 ${data_dir}/${bin_name}/*
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
   #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
 
@@ -228,6 +252,7 @@ stop_box() {
   done
   if (kill -15 $(pidof ${bin_name})); then
     rm -rf ${pid_file}
+    rm -rf ${temporary_config_file}
     display_bin_pid
   fi
 }
