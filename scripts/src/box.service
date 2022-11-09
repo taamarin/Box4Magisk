@@ -96,12 +96,12 @@ tree_dir() {
 temporary_config_file() {
   sed -i '/^[  ]*$/d' ${clash_template}
   if [ -f "${clash_template}" ]; then
-    if [ -f "${clash_confs}" ]; then
+    if [ -f "${clash_config}" ]; then
       cp -f ${clash_template} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
-      sed -n -E '/^proxies:$/,$p' ${clash_confs} >> ${temporary_config_file}.swp
+      sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${temporary_config_file}.swp
       sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
     else
-      log "[error]: ${clash_confs} file is missing!!!" && exit 1
+      log "[error]: ${clash_config} file is missing!!!" && exit 1
     fi
   else
     log "[error]: ${clash_template} file is missing !!!" && exit 1
@@ -121,9 +121,9 @@ run_box() {
     sing-box)
       tree_dir
       sed -i 's/network_mode=.*/network_mode="UDP"/' /data/adb/box/settings.ini
-      if ${bin_path} check -D ${data_dir}/sing-box -c ${sing_confs_dir} > ${run_path}/error.log 2>&1 ; then
+      if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
         log "[info]: starting ${bin_name} service."
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box -c ${sing_confs_dir} > /dev/null 2> ${run_path}/sing-box.log &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${sing_path_dir} -c ${sing_config} > /dev/null 2> ${run_path}/sing-box.log &
         echo -n $! > ${pid_file}
         start_listen
       else
@@ -139,17 +139,17 @@ run_box() {
         sed -i 's/network_mode=.*/network_mode="UDP"/' /data/adb/box/settings.ini
       fi
       if ${bin_path} -t -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
-        mv ${temporary_config_file} ${clash_confs}
-        log "[error]: configuration check failed, please check the ${clash_confs}。" && exit 1
+        mv ${temporary_config_file} ${clash_config}
+        log "[error]: configuration check failed, please check the ${clash_config}。" && exit 1
       fi
       ;;
     xray)
       tree_dir
       export XRAY_LOCATION_ASSET=${data_dir}/xray
-      export XRAY_LOCATION_CONFDIR=${xray_confs}
+      export XRAY_LOCATION_CONFDIR=${xray_config}
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
         log "[info]: starting ${bin_name} service."
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
@@ -161,7 +161,7 @@ run_box() {
     v2fly)
       tree_dir
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
-      export V2RAY_LOCATION_CONFDIR=${v2fly_confs}
+      export V2RAY_LOCATION_CONFDIR=${v2fly_config}
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
         log "[info]: starting ${bin_name} service."
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
@@ -199,7 +199,7 @@ display_bin_pid() {
 # ${box_path}/bin/yq -i ".tproxy-port=${tproxy_port}" ${box_path}/clash/config.yaml
 # ${box_path}/bin/yq -i ".dns.listen=\"${clash_dns_listen}\"" ${box_path}/clash/config.yaml
 # ${box_path}/bin/yq -i ".dns.fake-ip-range=\"${clash_fake_ip_range}\"" ${box_path}/clash/config.yaml
-# ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type == \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_confs_dir}
+# ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type == \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_config}
 # }
 
 start_box() {
@@ -217,8 +217,8 @@ start_box() {
 
   chown 0:3005 ${bin_path}
   chmod 0700 ${bin_path}
-  chown 0:3005 ${clash_confs}
-  chmod 0700 ${clash_confs}
+  chown 0:3005 ${clash_config}
+  chmod 0700 ${clash_config}
   chown 0:3005 ${data_dir}/${bin_name}/*
   chmod 0700 ${data_dir}/${bin_name}/*
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
@@ -231,7 +231,7 @@ start_box() {
     if ! (${bin_path} -v >> ${logs_file}); then
       log "[error]: kernel ${bin_name} corrupted" && exit 1
     fi
-    log "[info]: konfigurasi ${clash_confs}。"
+    log "[info]: konfigurasi ${clash_config}。"
     crontab_geo
   else
     if ! (${bin_path} version >> ${logs_file}); then

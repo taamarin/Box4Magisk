@@ -67,7 +67,7 @@ update_subgeo() {
     fi
   fi
   if [ ${auto_updatesubcript} == "true" ]; then
-    if update_file ${config_file} ${subcript_url} ; then
+    if update_file ${clash_config} ${subcript_url} ; then
       flag=true
     fi
   fi

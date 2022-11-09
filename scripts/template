@@ -35,10 +35,12 @@ hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1
 tun:
   enable: true
   device: tun0
-  stack: lwip # gvisor / lwip
+  stack: system # gvisor / lwip / system
   dns-hijack:
     - any:53
   auto-route: true
+  inet4-address: 172.19.0.1/30
+  inet6-address: [fdfe:dcba:9876::1/126]
   auto-detect-interface: true
   mtu: 9000
   strict_route: false
@@ -59,7 +61,7 @@ dns:
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: redir-host
-  fake-ip-range: 28.0.0.1/8
+  fake-ip-range: 172.19.0.1/30
   fake-ip-filter: ["*.local", "*.localhost"]
   nameserver:
     - https://dns.cloudflare.com/dns-query

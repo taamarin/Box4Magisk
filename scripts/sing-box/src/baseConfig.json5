@@ -1,8 +1,8 @@
 {
   "log": {
     "disabled": true,
-    "level": "error",
-    "output": "../run/output.sing-box.log",
+    "level": "panic",
+    "output": "../run/sing-box.log",
     "timestamp": false
   },
   "dns": {
@@ -19,11 +19,11 @@
       {
         "tag": "googledns",
         "address": "https://8.8.8.8/dns-query",
-        "detour": "sing-box"
+        "detour": "domestic"
       },
       {
         "tag": "proxyServerNameServer",
-        "address": "tcp://8.8.8.8",
+        "address": "tcp://8.8.4.4",
         "detour": "direct"
       },
       {
@@ -31,12 +31,34 @@
         "address": "RCode://name_error"
       }
     ],
-    "rules": []
+    "rules": [
+      {
+        "domain_suffix": [
+          "googlesyndication.com"
+          ],
+        "server": "cloudflare",
+        "disable_cache": false
+      },
+      {
+        "geosite": [
+          "category-ads-all"
+        ],
+        "server": "nxdomain",
+        "disable_cache": false
+      },
+      {
+        "geosite": [
+          "youtube"
+        ],
+        "server": "googledns",
+        "disable_cache": false
+      }
+    ]
   },
   "inbounds": [
     {
       "type": "tproxy",
-      "tag": "tproxy",
+      "tag": "tproxy-in",
       "listen": "::",
       "listen_port": 9353,
       "network": [
@@ -51,14 +73,23 @@
       "udp_timeout": 300
     },
     {
+      "type": "redirect",
+      "tag": "redirect-in",
+      "listen": "::",
+      "listen_port": 9454,
+      "sniff": true,
+      "sniff_override_destination": true,
+      "domain_strategy": "prefer_ipv4"
+    },
+    {
       "type": "tun",
-      "tag": "tun",
+      "tag": "tun-in",
       "interface_name": "tun0",
-      "inet4_address": "172.19.0.1/28",
+      "inet4_address": "172.19.0.1/30",
       "inet6_address": "fdfe:dcba:9876::1/126",
       "mtu": 30000,
       "stack": "system",
-      "auto_route": false,
+      "auto_route": true,
       "strict_route": false,
       "sniff": true,
       "sniff_override_destination": true,
@@ -68,15 +99,15 @@
   "outbounds": [
     {
       "type": "direct",
-      "tag": "direct"
+      "tag": "direct-out"
     },
     {
       "type": "block",
-      "tag": "block"
+      "tag": "block-out"
     },
     {
       "type": "dns",
-      "tag": "dns"
+      "tag": "dns-out"
     },
     {
       "tag": "sing-box",
@@ -86,16 +117,6 @@
         "sub-box"
       ]
     }
-    /*
-    {
-      "tag": "dns-server",
-      "type": "selector",
-      "outbounds": [
-        "direct"
-      ],
-      "default": "direct"
-    },
-    */
   ],
   "route": {
     "final": "sing-box",
@@ -110,24 +131,12 @@
     "rules": [
       {
         "protocol": "dns",
-        "outbound": "dns"
-      },
-      {
-        "domain_suffix": ["googlesyndication.com"],
-        "outbound": "sub-box"
-      },
-      {
-        "geosite": ["category-ads-all"],
-        "outbound": "block"
-      },
-      {
-        "port": 123,
-        "outbound": "direct"
+        "outbound": "dns-out"
       },
       {
         "network": "tcp",
         "port_range": ["5228:5230"],
-        "outbound": "direct"
+        "outbound": "direct-out"
       }
     ],
     "find_process": false,

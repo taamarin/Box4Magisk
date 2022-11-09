@@ -267,7 +267,6 @@ if [ "${proxy_mode}" != "core" ] ; then
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
-      sleep 0.75
       find_packages_uid
       if [ "${network_mode}" = "UDP" ] ; then
         if (zcat /proc/config.gz | grep -q TPROXY) ; then
