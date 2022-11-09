@@ -269,18 +269,18 @@ if [ "${proxy_mode}" != "core" ] ; then
       forward -D >> /dev/null 2>&1
       find_packages_uid
       if [ "${network_mode}" = "UDP" ] ; then
-        if (zcat /proc/config.gz | grep -q TPROXY) ; then
+          # if (zcat /proc/config.gz | grep -q TPROXY) ; then
           log "[info]: use TPROXY:TCP+UDP."
           log "[info]: creating iptables transparent proxy rules."
           time start_tproxy && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
-        else
-          log "[warning]: the device does not support TPROXY, please switch network_mode."
-          log "[info]: use REDIRECT:TCP."
-          log "[info]: creating iptables transparent proxy rules."
-          time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
-        fi
+          # else
+          # log "[warning]: the device does not support TPROXY, please switch network_mode."
+          # log "[info]: use REDIRECT: TCP."
+          # log "[info]: creating iptables transparent proxy rules."
+          # time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+          # fi
       else
-        [ "${network_mode}" = "TCP" ] && log "[info]: use REDIRECT:TCP." || log "[info]: use MIXED:TCP+TUN."
+        [ "${network_mode}" = "TCP" ] && log "[info]: use REDIRECT: TCP." || log "[info]: use MIXED: TCP+TUN."
         log "[info]: creating iptables transparent proxy rules."
         time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
         time forward -I
@@ -294,7 +294,7 @@ if [ "${proxy_mode}" != "core" ] ; then
       log "[warning]: clean up iptables transparent proxy rules done."
       ;;
     *)
-      echo "$0:  usage:  $0 {enable|disable|renew}"
+      echo "$0:  usage:  $0 {enable|disable}"
       ;;
   esac
 else
@@ -303,7 +303,7 @@ else
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
-      forward -I
+      time forward -I
       log "[info]: proxy_mode: ${proxy_mode} disable transparent proxy."
       ;;
     disable)
