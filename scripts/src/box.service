@@ -41,7 +41,7 @@ wait_bin_listen() {
     sleep 0.5
     wait_count=$((${wait_count} + 1))
   done
-  if probe_bin_alive && eval "${check_bin_cmd}"; then
+  if probe_bin_alive && eval "${check_bin_cmd}" ; then
     return 0
   else
     return 1
@@ -50,21 +50,21 @@ wait_bin_listen() {
 
 crontab_geo() {
   if [ ! "${update_interval}" == "false" ]; then
-    echo "${update_interval} ${scripts_dir}/box.tool subgeo" >> ${run_path}/root \
-    && log "[info]: crontab geo and subscription (${update_interval})。"
-    log "[info]: geox (${auto_updategeox})。"
-    log "[info]: subscription (${auto_updatesubcript})。"
+    echo "${update_interval} ${scripts_dir}/box.tool subgeo." >> ${run_path}/root \
+    && log "[info]: crontab geo and subscription (${update_interval})."
+    log "[info]: geox (${auto_updategeox})."
+    log "[info]: subscription (${auto_updatesubcript})."
   else
-    log "[info]: crontab geox & subscription is disable"
+    log "[info]: crontab geox & subscription is disable."
   fi
 }
 
 start_listen() {
   if ! wait_bin_listen ; then
     if probe_bin_alive ; then
-    log "[error]: ${bin_name} service is running but may not listening"
+    log "[error]: ${bin_name} service is running but may not listening."
     else
-      log "[error]: listen, ${bin_name} port is not detected  "
+      log "[error]: listen, ${bin_name} port is not detected."
       kill $(cat ${pid_file})
       rm -f ${pid_file} && exit 1
     fi
@@ -77,14 +77,12 @@ detected_port() {
       return 0
     fi
   else
-    log "[info]: skip!!!! port detected。"
+    log "[info]: skip!!!! port detected."
   fi
 }
 
 tree_dir() {
-  termux_bin="/data/data/com.termux/files/usr/bin"
-  if [ -f ${termux_bin}/tree ]; then
-    ${termux_bin}/tree -a ${data_dir}/${bin_name} > ${run_path}/tree.log 2>&1
+  if /data/data/com.termux/files/usr/bin/tree -a ${data_dir}/${bin_name} > ${run_path}/tree.log 2>&1 ; then
     ${busybox_path} awk '/./' ${run_path}/tree.log > ${run_path}/tree.logs
     while read p ; do
       log "[info]:" "$p"
@@ -101,18 +99,13 @@ temporary_config_file() {
       sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${temporary_config_file}.swp
       sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
     else
-      log "[error]: ${clash_config} file is missing!!!" && exit 1
+      log "[error]: ${clash_config} file is missing!!!." && exit 1
     fi
   else
-    log "[error]: ${clash_template} file is missing !!!" && exit 1
+    log "[error]: ${clash_template} file is missing !!!." && exit 1
   fi
-
   mv ${temporary_config_file}.swp ${temporary_config_file} \
-  && log "[info]: merge config clash Succes" || log "[error]: merge config failed!!!"
-
-  if [ ! -f "${temporary_config_file}" ]; then
-     log "[error]: ${temporary_config_file} file is missing !!!" && exit 1
-  fi
+  && log "[info]: merge config clash succes." || (log "[error]: merge config failed!!!." && exit 1)
 }
 
 run_box() {
@@ -143,7 +136,7 @@ run_box() {
         echo -n $! > ${pid_file}
       else
         mv ${temporary_config_file} ${clash_config}
-        log "[error]: configuration check failed, please check the ${clash_config}。" && exit 1
+        log "[error]: configuration check failed, please check the ${clash_config}." && exit 1
       fi
       ;;
     xray)
@@ -182,14 +175,14 @@ cgroup_limit() {
     if ! (${scripts_dir}/box.tool cgroup); then
       return 0
     else
-      log "[info]: cgroup limit: ${cgroup_memory_limit}"
+      log "[info]: cgroup limit: ${cgroup_memory_limit}."
     fi
   fi
 }
 
 display_bin_pid() {
   if probe_bin_alive ; then
-    log "[info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )" && return 0
+    log "[info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )." && return 0
   else
     log "[warning]: ${bin_name} service is stopped."
   fi
@@ -201,24 +194,22 @@ display_bin_pid() {
 # ${box_path}/bin/yq -i ".dns.fake-ip-range=\"${clash_fake_ip_range}\"" ${box_path}/clash/config.yaml
 # ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type == \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_config}
 # }
-
-start_box() {
-  echo -n "" > ${logs_file} && rm -rf /data/adb/box/run/sing-box.log
-  rm -rf /data/adb/box/run/clash.log && rm -rf /data/adb/box/run/root
-  if probe_bin_alive ; then
-    log "[warning]: ${bin_name} service masih berjalan " && exit 1
-  fi
+create_tun() {
   mkdir -p /dev/net
   [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-  echo $(date) >> ${logs_file}
-  if [ ! -f ${bin_path} ]; then
-    log "[info]: kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory" && exit 1
-  fi
+}
 
+start_box() {
+  echo -n "" > ${logs_file}
+  echo $(date) >> ${logs_file}
+  if probe_bin_alive ; then
+    log "[warning]: ${bin_name} service masih berjalan." && exit 1
+  fi
+  if [ ! -f ${bin_path} ]; then
+    log "[info]: kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1
+  fi
   chown 0:3005 ${bin_path}
   chmod 0700 ${bin_path}
-  chown 0:3005 ${clash_config}
-  chmod 0700 ${clash_config}
   chown 0:3005 ${data_dir}/${bin_name}/*
   chmod 0700 ${data_dir}/${bin_name}/*
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
@@ -229,16 +220,17 @@ start_box() {
     ${busybox_path} crontab -c ${run_path} -r
     touch ${run_path}/root && chmod 0600 ${run_path}/root
     if ! (${bin_path} -v >> ${logs_file}); then
-      log "[error]: kernel ${bin_name} corrupted" && exit 1
+      log "[error]: kernel ${bin_name} corrupted." && exit 1
     fi
-    log "[info]: konfigurasi ${clash_config}。"
+    log "[info]: konfigurasi ${clash_config}."
     crontab_geo
   else
     if ! (${bin_path} version >> ${logs_file}); then
-      log "[error]: kernel ${bin_name} corrupted" && exit 1
+      log "[error]: kernel ${bin_name} corrupted." && exit 1
     fi
   fi
   ipv6
+  create_tun
   run_box
   cgroup_limit
   detected_port
@@ -252,7 +244,6 @@ stop_box() {
   done
   if (kill -15 $(pidof ${bin_name})); then
     rm -rf ${pid_file}
-    rm -rf ${temporary_config_file}
     display_bin_pid
   fi
 }

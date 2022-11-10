@@ -269,16 +269,16 @@ if [ "${proxy_mode}" != "core" ] ; then
       forward -D >> /dev/null 2>&1
       find_packages_uid
       if [ "${network_mode}" = "UDP" ] ; then
-          # if (zcat /proc/config.gz | grep -q TPROXY) ; then
-          log "[info]: use TPROXY:TCP+UDP."
-          log "[info]: creating iptables transparent proxy rules."
-          time start_tproxy && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
-          # else
-          # log "[warning]: the device does not support TPROXY, please switch network_mode."
-          # log "[info]: use REDIRECT: TCP."
-          # log "[info]: creating iptables transparent proxy rules."
-          # time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
-          # fi
+        # if (zcat /proc/config.gz | grep -q TPROXY) ; then
+        log "[info]: use TPROXY: TCP+UDP."
+        log "[info]: creating iptables transparent proxy rules."
+        time start_tproxy && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+        # else
+        # log "[warning]: the device does not support TPROXY, please switch network_mode."
+        # log "[info]: use REDIRECT: TCP."
+        # log "[info]: creating iptables transparent proxy rules."
+        # time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+        # fi
       else
         [ "${network_mode}" = "TCP" ] && log "[info]: use REDIRECT: TCP." || log "[info]: use MIXED: TCP+TUN."
         log "[info]: creating iptables transparent proxy rules."

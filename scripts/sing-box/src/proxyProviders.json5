@@ -1,32 +1,6 @@
 [
   {
     name: 'sub-box',
-    type: 'http',
-    subLink: 'https://pre.paimon.gq/clash.yaml',
-    target: 'proxy',
-    shown: true,
-    urltest: {
-      shown: true,
-      url: 'http://cp.cloudflare.com/generate_204',
-      interval: '1m',
-      tolerance: 100,
-    },
-    xray: false,
-    subInfo: {
-      check: true,
-      support: false,
-      info: {
-        upload: 0,
-        download: 0,
-        total: 0,
-        expire: 0,
-      },
-      timeStamp: 1667942402027,
-    },
-    timeStamp: 1667942402027,
-  },
-  {
-    name: 'sub-box',
     type: 'file',
     target: 'proxy',
   },

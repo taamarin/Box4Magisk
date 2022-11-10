@@ -91,6 +91,15 @@
       "stack": "system",
       "auto_route": true,
       "strict_route": false,
+      "inet4_route_address": [
+        "0.0.0.0/1",
+        "128.0.0.0/1"
+      ],
+      "inet6_route_address": [
+        "::/1",
+        "8000::/1"
+      ],
+      "endpoint_independent_nat": false,
       "sniff": true,
       "sniff_override_destination": true,
       "domain_strategy": "prefer_ipv4"

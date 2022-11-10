@@ -1,8 +1,7 @@
 #!/system/bin/sh
 
 moddir="/data/adb/modules/box_for_magisk"
-if [ -n "$(magisk -v | grep lite)" ]
-then
+if [ -n "$(magisk -v | grep lite)" ]; then
   moddir=/data/adb/lite_modules/box_for_magisk
 fi
 
@@ -25,8 +24,8 @@ start_service() {
     fi
 
     if [ "$?" = 0 ]; then
-       ulimit -SHn 1000000
-       inotifyd ${scripts_dir}/box.inotify ${moddir} &>> /dev/null &
+      ulimit -SHn 1000000
+      inotifyd ${scripts_dir}/box.inotify ${moddir} &>> /dev/null &
     fi
   fi
 }

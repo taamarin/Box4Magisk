@@ -13,7 +13,7 @@ tcp-concurrent: true
 enable-process: false
 geodata-loader: memconservative
 inbound-tfo: true
-interface-name: ""
+# interface-name: ""
 # secret: ""
 # routing-mark: 233
 # geox-url: {mmdb: "", geoip: "", geosite: ""}
@@ -33,14 +33,14 @@ sniffer:
   parse-pure-ip: true
 hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1", "ota-cache1.googlezip.net": "127.0.0.1", "ota-cache2.googlezip.net": "127.0.0.1"}
 tun:
-  enable: true
+  enable: false
   device: tun0
   stack: system # gvisor / lwip / system
   dns-hijack:
     - any:53
   auto-route: true
-  inet4-address: 172.19.0.1/30
-  inet6-address: [fdfe:dcba:9876::1/126]
+  #  inet4-address: 198.18.0.1/30
+  #  inet6-address: [fdfe:dcba:9876::1/126]
   auto-detect-interface: true
   mtu: 9000
   strict_route: false
@@ -60,8 +60,8 @@ dns:
     - 'https://112.215.248.124:853#REJECT'
   listen: 0.0.0.0:1053
   use-hosts: true
-  enhanced-mode: redir-host
-  fake-ip-range: 172.19.0.1/30
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ["*.local", "*.localhost"]
   nameserver:
     - https://dns.cloudflare.com/dns-query

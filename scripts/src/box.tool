@@ -96,8 +96,8 @@ update_kernel() {
   arch="arm64"
   platform="android"
   file_kernel="clash.${arch}"
-  tag="Prerelease-alpha-next"
-  tag_name="alpha-next-[0-9,a-z]+"
+  tag="Prerelease-Alpha"
+  tag_name="alpha-[0-9,a-z]+"
   url_meta="https://github.com/taamarin/Clash.Meta/releases"
 
   tag_meta=$(curl -fsSL ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
@@ -156,8 +156,7 @@ update_dashboard() {
 case "$1" in
   subgeo)
     update_subgeo
-    rm -rf ${data_dir}/${bin_name}/*.bak
-    exit 1
+    rm -rf ${data_dir}/${bin_name}/*.bak && exit 1
     ;;
   port)
     port_detection
