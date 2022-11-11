@@ -2,9 +2,9 @@
 
 (
 until [ $(getprop init.svc.bootanim) = "stopped" ] ; do
-    sleep 5
+    sleep 3
 done
 
-chmod 755 data/adb/box/scripts/start.sh
-data/adb/box/scripts/start.sh
+chmod 755 /data/adb/box/scripts/start.sh
+/data/adb/box/scripts/start.sh
 )&

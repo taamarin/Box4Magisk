@@ -1,5 +1,2 @@
-## ⟳ Changelog v4.3
-- add `template` for clash
-
-#### ⟳ Changelog v4.2
-- optimization and improvement
+## ⟳ Changelog v4.4
+- fix filter && add IPv6 Support
