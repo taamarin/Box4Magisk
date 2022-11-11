@@ -11,12 +11,14 @@ ipv6() {
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+    log "[info]: Ipv6: disable"
   else
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
     echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+    log "[info]: Ipv6: enable"
   fi
 }
 
@@ -112,7 +114,7 @@ run_box() {
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      tree_dir
+      # tree_dir
       sed -i 's/network_mode=.*/network_mode="UDP"/' /data/adb/box/settings.ini
       if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
         log "[info]: starting ${bin_name} service."
@@ -120,11 +122,11 @@ run_box() {
         echo -n $! > ${pid_file}
         start_listen
       else
-        log "[error]: configuration check failed, please check the ${run_path}/error.log file." && exit 1
+        log "[error]: configuration failed, please check the ${run_path}/error.log file." && exit 1
       fi
       ;;
     clash)
-      tree_dir
+      # tree_dir
       temporary_config_file
       if [ "${clash_tun_status}" == "true" ]; then
         sed -i 's/network_mode=.*/network_mode="MIXED"/' /data/adb/box/settings.ini
@@ -140,7 +142,7 @@ run_box() {
       fi
       ;;
     xray)
-      tree_dir
+      # tree_dir
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${xray_config}
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
@@ -152,7 +154,7 @@ run_box() {
       fi
     ;;
     v2fly)
-      tree_dir
+      # tree_dir
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${v2fly_config}
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
@@ -242,7 +244,7 @@ stop_box() {
   for cron in ${cronkill[@]}; do
      kill ${cron}
   done
-  if (kill -15 $(pidof ${bin_name})); then
+  if (kill $(pidof ${bin_name}) || killall ${bin_name}); then
     rm -rf ${pid_file}
     display_bin_pid
   fi
@@ -250,7 +252,7 @@ stop_box() {
 
 case "$1" in
   start)
-    time stop_box >> /dev/null 2>&1
+    stop_box >> /dev/null 2>&1
     time start_box
     ;;
   stop)

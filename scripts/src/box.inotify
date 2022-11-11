@@ -5,25 +5,24 @@ scripts_dir=$(dirname ${scripts})
 
 service_path="/data/adb/box/scripts/box.service"
 iptables_path="/data/adb/box/scripts/box.iptables"
-run_path="/data/adb/box/run"
-log_file="${run_path}/service.log"
+log_path="/data/adb/box/run/service.log"
 
 events=$1
 monitor_dir=$2
 monitor_file=$3
 
 create_run() {
-  if [ ! -d "${run_path}" ]; then
-    mkdir -p ${run_path}
+  if [ ! -d /data/adb/box/run ]; then
+    mkdir -p /data/adb/box/run
   fi
 }
 
 service_control() {
   if [ "${monitor_file}" = "disable" ]; then
     if [ "${events}" = "d" ]; then
-      ${service_path} start &> ${log_file} && ${iptables_path} enable &>> ${log_file} &
+      ${service_path} start &> ${log_path} && ${iptables_path} enable &>> ${log_path} &
     elif [ "${events}" = "n" ]; then
-      ${service_path} stop &>> ${log_file} && ${iptables_path} disable &>> ${log_file} &
+      ${service_path} stop &>> ${log_path} && ${iptables_path} disable &>> ${log_path} &
     fi
   fi
 }

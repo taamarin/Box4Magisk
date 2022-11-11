@@ -6,7 +6,6 @@ if [ -n "$(magisk -v | grep lite)" ]; then
 fi
 
 scripts_dir="/data/adb/box/scripts"
-busybox_path="/data/adb/magisk/busybox"
 
 refresh_box() {
   if [ -f ${box_pid_file} ]; then
@@ -22,11 +21,7 @@ start_service() {
         ${scripts_dir}/box.iptables enable
       fi
     fi
-
-    if [ "$?" = 0 ]; then
-      ulimit -SHn 1000000
-      inotifyd ${scripts_dir}/box.inotify ${moddir} &>> /dev/null &
-    fi
+    inotifyd ${scripts_dir}/box.inotify ${moddir} &>> /dev/null &
   fi
 }
 

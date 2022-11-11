@@ -33,15 +33,15 @@ sniffer:
   parse-pure-ip: true
 hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1", "ota-cache1.googlezip.net": "127.0.0.1", "ota-cache2.googlezip.net": "127.0.0.1"}
 tun:
-  enable: false
+  enable: true
   device: tun0
   stack: system # gvisor / lwip / system
   dns-hijack:
     - any:53
   auto-route: true
+  auto-detect-interface: true
   #  inet4-address: 198.18.0.1/30
   #  inet6-address: [fdfe:dcba:9876::1/126]
-  auto-detect-interface: true
   mtu: 9000
   strict_route: false
   inet4_route_address:
@@ -55,17 +55,18 @@ dns:
   ipv6: true
   prefer-h3: false
   default-nameserver:
-    - 'tcp://8.8.8.8' # googledns
-    - 'tcp://1.1.1.1' # cloudflare
-    - 'https://112.215.248.124:853#REJECT'
+    - '1.1.1.1'
+    - '112.215.248.124#REJECT'
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ["*.local", "*.localhost"]
+  proxy-server-nameserver:
+    - '8.8.8.8'
   nameserver:
-    - https://dns.cloudflare.com/dns-query
-    - tls://dns.google
+    - 'tcp://1.0.0.1'
+    - 'tcp://8.8.4.4'
   # fallback-filter:
   #   geoip: true
   #   geoip-code: ID
