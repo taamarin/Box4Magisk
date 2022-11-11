@@ -25,7 +25,7 @@ find_packages_uid() {
 forward() {
   ${iptables} $1 FORWARD -o ${tun_device} -j ACCEPT
   ${iptables} $1 FORWARD -i ${tun_device} -j ACCEPT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} $1 FORWARD -o ${tun_device} -j ACCEPT
     ${ip6tables} $1 FORWARD -i ${tun_device} -j ACCEPT
   fi
@@ -109,14 +109,14 @@ stop_redirect() {
 start_tproxy() {
   ip rule add fwmark ${id} lookup ${id}
   ip route add local default dev lo table ${id}
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ip -6 rule add fwmark ${id} lookup ${id}
     ip -6 route add local default dev lo table ${id}
   fi
 
   ${iptables} -t mangle -N BOX_EXTERNAL
   ${iptables} -t mangle -F BOX_EXTERNAL
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -N BOX_EXTERNAL
     ${ip6tables} -t mangle -F BOX_EXTERNAL
   fi
@@ -129,7 +129,7 @@ start_tproxy() {
   # It might need more complicated solution.
   ${iptables} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
   ${iptables} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
     ${ip6tables} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
   fi
@@ -139,7 +139,7 @@ start_tproxy() {
     for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
     done
-    if [ "ipv6" == "true" ]; then
+    if [ "${ipv6}" == "true" ] ; then
       for subnet in ${intranet6[@]} ; do
         ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
       done
@@ -149,7 +149,7 @@ start_tproxy() {
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
     done
-    if [ "ipv6" == "true" ]; then
+    if [ "${ipv6}" == "true" ] ; then
       for subnet in ${intranet6[@]} ; do
         ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
         ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
@@ -159,7 +159,7 @@ start_tproxy() {
 
   ${iptables} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
   ${iptables} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
     ${ip6tables} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
   fi
@@ -171,7 +171,7 @@ start_tproxy() {
     ${iptables} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
     ${iptables} -t mangle -A BOX_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
   done
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     for ap in ${ap_list[@]} ; do
       ${ip6tables} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
       ${ip6tables} -t mangle -A BOX_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
@@ -182,7 +182,7 @@ start_tproxy() {
 
   ${iptables} -t mangle -N BOX_LOCAL
   ${iptables} -t mangle -F BOX_LOCAL
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -I PREROUTING -j BOX_EXTERNAL
  
     ${ip6tables} -t mangle -N BOX_LOCAL
@@ -193,7 +193,7 @@ start_tproxy() {
   for ignore in ${ignore_out_list[@]} ; do
     ${iptables} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
   done
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     for ignore in ${ignore_out_list[@]} ; do
       ${ip6tables} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
     done
@@ -204,7 +204,7 @@ start_tproxy() {
     for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
     done
-    if [ "ipv6" == "true" ]; then
+    if [ "${ipv6}" == "true" ] ; then
       for subnet in ${intranet6[@]} ; do
         ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
       done
@@ -214,7 +214,7 @@ start_tproxy() {
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
     done
-    if [ "ipv6" == "true" ]; then
+    if [ "${ipv6}" == "true" ] ; then
       for subnet in ${intranet6[@]} ; do
         ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
         ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
@@ -224,7 +224,7 @@ start_tproxy() {
 
   # Bypass box itself
   ${iptables} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
   fi
   # ${iptables} -t mangle -I BOX_LOCAL -j RETURN -m mark --mark ${routing_mark}
@@ -236,7 +236,7 @@ start_tproxy() {
       # Route Everything
       ${iptables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
       ${iptables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
-      if [ "ipv6" == "true" ]; then
+      if [ "${ipv6}" == "true" ] ; then
         ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
         ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
       fi
@@ -246,7 +246,7 @@ start_tproxy() {
       for appid in $(cat ${uid_list[@]}) ; do
         ${iptables} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
       done
-      if [ "ipv6" == "true" ]; then
+      if [ "${ipv6}" == "true" ] ; then
         for appid in $(cat ${uid_list[@]}) ; do
           ${ip6tables} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
         done
@@ -254,7 +254,7 @@ start_tproxy() {
       # Allow !app
       ${iptables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
       ${iptables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
-      if [ "ipv6" == "true" ]; then
+      if [ "${ipv6}" == "true" ] ; then
         ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
         ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
       fi
@@ -266,7 +266,7 @@ start_tproxy() {
       ${iptables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
       ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
     done
-    if [ "ipv6" == "true" ]; then
+    if [ "${ipv6}" == "true" ] ; then
       for appid in ${appid_list[@]} ; do
         ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
         ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
@@ -276,7 +276,7 @@ start_tproxy() {
     ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${id}
     ${iptables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
-    if [ "ipv6" == "true" ]; then
+    if [ "${ipv6}" == "true" ] ; then
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
@@ -289,7 +289,7 @@ start_tproxy() {
 
   ${iptables} -t mangle -N DIVERT
   ${iptables} -t mangle -F DIVERT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -I OUTPUT -j BOX_LOCAL
  
     ${ip6tables} -t mangle -N DIVERT
@@ -298,19 +298,19 @@ start_tproxy() {
 
   ${iptables} -t mangle -A DIVERT -j MARK --set-mark ${id}
   ${iptables} -t mangle -A DIVERT -j ACCEPT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -A DIVERT -j MARK --set-mark ${id}
     ${ip6tables} -t mangle -A DIVERT -j ACCEPT
   fi
 
   ${iptables} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
   fi
 
   # This rule blocks local access to tproxy-port to prevent traffic loopback.
   ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -A OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
   fi
 
@@ -339,7 +339,7 @@ start_tproxy() {
 stop_tproxy() {
   ip rule del fwmark ${id} table ${id}
   ip route del local default dev lo table ${id}
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ip -6 rule del fwmark ${id} table ${id}
     ip -6 route del local default dev lo table ${id}
   fi
@@ -349,7 +349,7 @@ stop_tproxy() {
 
   ${iptables} -t mangle -D OUTPUT -j BOX_LOCAL
 
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -D PREROUTING -j BOX_EXTERNAL
     ${ip6tables} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
 
@@ -358,27 +358,27 @@ stop_tproxy() {
 
   ${iptables} -t mangle -F BOX_EXTERNAL
   ${iptables} -t mangle -X BOX_EXTERNAL
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -F BOX_EXTERNAL
     ${ip6tables} -t mangle -X BOX_EXTERNAL
   fi
 
   ${iptables} -t mangle -F BOX_LOCAL
   ${iptables} -t mangle -X BOX_LOCAL
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -F BOX_LOCAL
     ${ip6tables} -t mangle -X BOX_LOCAL
   fi
 
   ${iptables} -t mangle -F DIVERT
   ${iptables} -t mangle -X DIVERT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -t mangle -F DIVERT
     ${ip6tables} -t mangle -X DIVERT
   fi
 
   ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
-  if [ "ipv6" == "true" ]; then
+  if [ "${ipv6}" == "true" ] ; then
     ${ip6tables} -D OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
   fi
 
@@ -404,7 +404,7 @@ if [ "${proxy_mode}" != "core" ] ; then
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
-      find_packages_uid
+      time find_packages_uid
       if [ "${network_mode}" = "UDP" ] ; then
         # if (zcat /proc/config.gz | grep -q TPROXY) ; then
         log "[info]: use TPROXY: TCP+UDP."
@@ -422,9 +422,6 @@ if [ "${proxy_mode}" != "core" ] ; then
         time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
         time forward -I
       fi
-      ;;
-    uid)
-      find_packages_uid
       ;;
     disable)
       log "[warning]: cleaning up iptables transparent proxy rules."
