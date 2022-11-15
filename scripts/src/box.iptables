@@ -136,14 +136,12 @@ start_tproxy() {
 
   # Bypass intranet
   if [ "${bin_name}" = "clash" ] ; then
-    ${iptables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
     for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
-      ${ip6tables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-      for subnet in ${intranet6[@]} ; do
-        ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
+      for subnet6 in ${intranet6[@]} ; do
+        ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet6} -j RETURN
       done
     fi
   else
@@ -152,9 +150,9 @@ start_tproxy() {
       ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
-      for subnet in ${intranet6[@]} ; do
-        ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
-        ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
+      for subnet6 in ${intranet6[@]} ; do
+        ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
+        ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet6} ! -p udp -j RETURN
       done
     fi
   fi
@@ -203,12 +201,14 @@ start_tproxy() {
 
   # Bypass intranet
   if [ "${bin_name}" = "clash" ] ; then
+    ${iptables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
     for subnet in ${intranet[@]} ; do
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
-      for subnet in ${intranet6[@]} ; do
-        ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
+      ${ip6tables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
+      for subnet6 in ${intranet6[@]} ; do
+        ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet6} -j RETURN
       done
     fi
   else
@@ -217,9 +217,9 @@ start_tproxy() {
       ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
-      for subnet in ${intranet6[@]} ; do
-        ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
-        ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
+      for subnet6 in ${intranet6[@]} ; do
+        ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
+        ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet6} ! -p udp -j RETURN
       done
     fi
   fi

@@ -23,7 +23,7 @@ fi
 mkdir -p ${MODPATH}/system/bin
 mkdir -p ${MODPATH}/system/etc/security/cacerts
 mkdir -p /data/adb/box
-mkdir -p /data/adb/box/kernel
+mkdir -p /data/adb/box/bin
 mkdir -p /data/adb/box/dashboard
 mkdir -p /data/adb/box/run
 mkdir -p /data/adb/box/scripts
