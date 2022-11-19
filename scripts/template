@@ -1,5 +1,5 @@
-tproxy-port: 9353
-redir-port: 9454
+tproxy-port: 9898
+redir-port: 9797
 mode: rule
 allow-lan: true
 unified-delay: true

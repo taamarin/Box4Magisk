@@ -5,7 +5,7 @@ scripts_dir=$(dirname ${scripts})
 source /data/adb/box/settings.ini
 
 ipv6() {
-  if [ "${ipv6}" == "false" ] ; then
+  if [ "${ipv6}" = "false" ] ; then
     echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
@@ -51,7 +51,7 @@ wait_bin_listen() {
 }
 
 crontab_geo() {
-  if [ ! "${update_interval}" == "false" ] ; then
+  if [ ! "${update_interval}" = "false" ] ; then
     echo "${update_interval} ${scripts_dir}/box.tool subgeo." >> ${run_path}/root \
     && log "[info]: crontab geo and subscription (${update_interval})."
     log "[info]: geox (${auto_updategeox})."
@@ -74,7 +74,7 @@ start_listen() {
 }
 
 detected_port() {
-  if [ "${port_detect}" == "true" ] ; then
+  if [ "${port_detect}" = "true" ] ; then
     if ! (${scripts_dir}/box.tool port) ; then
       return 0
     fi
@@ -117,6 +117,7 @@ run_box() {
     sing-box)
       # tree_dir
       sed -i 's/network_mode=.*/network_mode="TPROXY"/' /data/adb/box/settings.ini
+      # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
       if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${sing_path_dir} -c ${sing_config} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
@@ -129,10 +130,11 @@ run_box() {
     clash)
       # tree_dir
       temporary_config_file
-      if [ "${clash_tun_status}" == "true" ] ; then
+      if [ "${clash_tun_status}" = "true" ] ; then
         sed -i 's/network_mode=.*/network_mode="MIXED"/' /data/adb/box/settings.ini
       else
         sed -i 's/network_mode=.*/network_mode="TPROXY"/' /data/adb/box/settings.ini
+        sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true,/' /data/adb/box/settings.ini
       fi
       if ${bin_path} -t -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/error.log ; then
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > /dev/null 2> ${run_path}/${bin_name}.log &
@@ -172,7 +174,7 @@ run_box() {
 }
 
 cgroup_limit() {
-  if [ "${cgroup_memory}" == "true" ] ; then
+  if [ "${cgroup_memory}" = "true" ] ; then
     if ! (${scripts_dir}/box.tool cgroup) ; then
       return 0
     else
@@ -193,7 +195,7 @@ display_bin_pid() {
 # ${box_path}/bin/yq -i ".tproxy-port=${tproxy_port}" ${box_path}/clash/config.yaml
 # ${box_path}/bin/yq -i ".dns.listen=\"${clash_dns_listen}\"" ${box_path}/clash/config.yaml
 # ${box_path}/bin/yq -i ".dns.fake-ip-range=\"${clash_fake_ip_range}\"" ${box_path}/clash/config.yaml
-# ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type == \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_config}
+# ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type = \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_config}
 # }
 create_tun() {
   mkdir -p /dev/net
@@ -216,7 +218,7 @@ start_box() {
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
   #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
 
-  if [ "${bin_name}" == "clash" ] ; then
+  if [ "${bin_name}" = "clash" ] ; then
     nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
     ${busybox_path} crontab -c ${run_path} -r
     touch ${run_path}/root && chmod 0600 ${run_path}/root

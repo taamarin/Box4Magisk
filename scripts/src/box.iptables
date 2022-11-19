@@ -12,7 +12,6 @@ find_packages_uid() {
 }
 
 # uid_list=()
-
 # find_packages_uid() {
 #  for user in $(ls /data/user/) ; do
 #    for package in ${packages_list[@]} ; do
@@ -87,7 +86,7 @@ start_redirect() {
     done
     ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${redir_port}
     ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${redir_port}
-    log "proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+    log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
   fi
 
   ${iptables} -t nat -I OUTPUT -j BOX_LOCAL
@@ -284,7 +283,7 @@ start_tproxy() {
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     fi
-    log "proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+    log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
   fi
 
   ${iptables} -t mangle -I OUTPUT -j BOX_LOCAL
