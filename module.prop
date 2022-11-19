@@ -1,7 +1,7 @@
 id=box_for_magisk
 name=Box for Magisk
-version=v4.4
-versionCode=20221115
-author=CHIZI-0618 (edit: t@amarin)
+version=v4.5
+versionCode=20221121
+author=t@amarin
 description=Use sing-box, clash, v2ray, xray tunnel proxy on Android devices
 updateJson=https://github.com/taamarin/box_for_magisk/raw/master/update.json
