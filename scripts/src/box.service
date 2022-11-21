@@ -116,7 +116,7 @@ run_box() {
   case "${bin_name}" in
     sing-box)
       # tree_dir
-      sed -i 's/network_mode=.*/network_mode="TPROXY"/' /data/adb/box/settings.ini
+      sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
       # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
       if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${sing_path_dir} -c ${sing_config} > /dev/null 2> ${run_path}/${bin_name}.log &
@@ -129,15 +129,18 @@ run_box() {
       ;;
     clash)
       # tree_dir
-      temporary_config_file
       if [ "${clash_tun_status}" = "true" ] ; then
-        sed -i 's/network_mode=.*/network_mode="MIXED"/' /data/adb/box/settings.ini
+        sed -i 's/network_mode=.*/network_mode="MIXED"/' ${settings}
+        sed -i 's/auto-route:.*/auto-route: true/' ${clash_template}
+        sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' ${clash_template}
       else
-        sed -i 's/network_mode=.*/network_mode="TPROXY"/' /data/adb/box/settings.ini
-        sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true,/' /data/adb/box/settings.ini
+        sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
+        sed -i 's/auto-route:.*/auto-route: false/' ${clash_template}
+        sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' ${clash_template}
       fi
+      temporary_config_file
       if ${bin_path} -t -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/${bin_name}.log 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         mv ${temporary_config_file} ${clash_config}

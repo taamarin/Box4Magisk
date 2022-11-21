@@ -91,6 +91,9 @@ start_redirect() {
 
   ${iptables} -t nat -I OUTPUT -j BOX_LOCAL
   ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  if [ "${ipv6}" = "true" ] ; then
+    ${ip6tables} -A OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  fi
 }
 
 stop_redirect() {
@@ -98,6 +101,9 @@ stop_redirect() {
 
   ${iptables} -t nat -D OUTPUT -j BOX_LOCAL
   ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  if [ "${ipv6}" = "true" ] ; then
+    ${ip6tables} -D OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  fi
 
   ${iptables} -t nat -F BOX_EXTERNAL
   ${iptables} -t nat -X BOX_EXTERNAL

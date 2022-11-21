@@ -64,7 +64,7 @@ mv ${MODPATH}/scripts/cacert.pem ${MODPATH}/system/etc/security/cacerts
 mv ${MODPATH}/scripts/src/* /data/adb/box/scripts/
 mv ${MODPATH}/scripts/clash/* /data/adb/box/clash/
 mv ${MODPATH}/scripts/settings.ini /data/adb/box/
-mv ${MODPATH}/scripts/template /data/adb/box/
+mv ${MODPATH}/scripts/template.ini /data/adb/box/
 mv ${MODPATH}/scripts/xray/confs /data/adb/box/xray/
 mv ${MODPATH}/scripts/v2fly/confs /data/adb/box/v2fly/
 mv ${MODPATH}/scripts/sing-box /data/adb/box/

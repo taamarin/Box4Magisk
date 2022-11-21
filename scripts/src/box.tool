@@ -4,11 +4,6 @@ scripts=$(realpath $0)
 scripts_dir=$(dirname ${scripts})
 source /data/adb/box/settings.ini
 
-logs() {
-  export TZ=Asia/Jakarta
-  echo -n "$(date '+%H:%M %z') $*" | tee -a ${logs_file} > /dev/null 2>&1
-}
-
 restart_clash() {
   ${scripts_dir}/box.service start
   sleep 0.5
