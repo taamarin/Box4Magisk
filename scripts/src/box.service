@@ -24,7 +24,7 @@ ipv6() {
 
 probe_bin_alive() {
    [ -f ${pid_file} ] && cmd_file="/proc/$(pidof ${bin_name})/cmdline" || return 1
-   [ -f ${cmd_file} ] && grep -q ${bin_path} ${cmd_file} && return 0 || return 1
+   [ -f ${cmd_file} ] && grep -q ${bin_name} ${cmd_file} && return 0 || return 1
 }
 
 find_netstat_path() {
@@ -83,16 +83,6 @@ detected_port() {
   fi
 }
 
-tree_dir() {
-  if /data/data/com.termux/files/usr/bin/tree -a ${data_dir}/${bin_name} > ${run_path}/tree.log 2>&1 ; then
-    ${busybox_path} awk '/./' ${run_path}/tree.log > ${run_path}/tree.logs
-    while read p ; do
-      log "[info]:" "$p"
-    done <${run_path}/tree.logs
-    rm -rf ${run_path}/tree.logs && rm -rf ${run_path}/tree.log
-  fi
-}
-
 temporary_config_file() {
   sed -i '/^[  ]*$/d' ${clash_template}
   if [ -f "${clash_template}" ] ; then
@@ -115,7 +105,6 @@ run_box() {
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      # tree_dir
       sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
       # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
       if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
@@ -128,7 +117,6 @@ run_box() {
       fi
       ;;
     clash)
-      # tree_dir
       if [ "${clash_tun_status}" = "true" ] ; then
         sed -i 's/network_mode=.*/network_mode="MIXED"/' ${settings}
         sed -i 's/auto-route:.*/auto-route: true/' ${clash_template}
@@ -148,7 +136,6 @@ run_box() {
       fi
       ;;
     xray)
-      # tree_dir
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${xray_config}
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
@@ -159,7 +146,6 @@ run_box() {
       fi
     ;;
     v2fly)
-      # tree_dir
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${v2fly_config}
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
@@ -188,18 +174,20 @@ cgroup_limit() {
 
 display_bin_pid() {
   if probe_bin_alive ; then
-    log "[info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )." && return 0
+    log "[Info]: ${bin_name} has started with the $(stat -c %U:%G /proc/$(pidof ${bin_name})) user group."
+    log "[info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )."
   else
     log "[warning]: ${bin_name} service is stopped."
   fi
 }
 
 # yq() {
-# ${box_path}/bin/yq -i ".tproxy-port=${tproxy_port}" ${box_path}/clash/config.yaml
-# ${box_path}/bin/yq -i ".dns.listen=\"${clash_dns_listen}\"" ${box_path}/clash/config.yaml
-# ${box_path}/bin/yq -i ".dns.fake-ip-range=\"${clash_fake_ip_range}\"" ${box_path}/clash/config.yaml
-# ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type = \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_config}
+  # ${box_path}/bin/yq -i ".tproxy-port=${tproxy_port}" ${box_path}/clash/config.yaml
+  # ${box_path}/bin/yq -i ".dns.listen=\"${clash_dns_listen}\"" ${box_path}/clash/config.yaml
+  # ${box_path}/bin/yq -i ".dns.fake-ip-range=\"${clash_fake_ip_range}\"" ${box_path}/clash/config.yaml
+  # ${bin_kernel}/yq -o=json -i "(.inbounds[] | select(.type = \"tproxy\") | .listen_port) = ${tproxy_port}" ${sing_config}
 # }
+
 create_tun() {
   mkdir -p /dev/net
   [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun

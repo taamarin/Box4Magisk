@@ -11,16 +11,6 @@ find_packages_uid() {
   done
 }
 
-# uid_list=()
-# find_packages_uid() {
-#  for user in $(ls /data/user/) ; do
-#    for package in ${packages_list[@]} ; do
-#      uid_list[${#uid_list[@]}]=$(pm list packages -U --user ${user} | grep ${package} | ${busybox_path} awk -F 'uid:' '{print $2}')
-#    done
-#  done
-# }
-
-
 forward() {
   ${iptables} $1 FORWARD -o ${tun_device} -j ACCEPT
   ${iptables} $1 FORWARD -i ${tun_device} -j ACCEPT
@@ -77,7 +67,7 @@ start_redirect() {
       done
       # Allow !app
       ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
-      log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} has no transparent proxy."
+      log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} no transparent proxy."
     fi
   elif [ "${proxy_mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -87,6 +77,10 @@ start_redirect() {
     ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${redir_port}
     ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${redir_port}
     log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+  else
+    log "[warning]: proxy mode: ${proxy_mode}, erro."
+    ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
+    log "[info]: transparent proxy for all apps."
   fi
 
   ${iptables} -t nat -I OUTPUT -j BOX_LOCAL
@@ -112,10 +106,10 @@ stop_redirect() {
 }
 
 start_tproxy() {
-  ip rule add fwmark ${id} lookup ${id}
+  ip rule add fwmark ${id} table ${id} pref ${id}
   ip route add local default dev lo table ${id}
   if [ "${ipv6}" = "true" ] ; then
-    ip -6 rule add fwmark ${id} lookup ${id}
+    ip -6 rule add fwmark ${id} table ${id} pref ${id}
     ip -6 route add local default dev lo table ${id}
   fi
 
@@ -127,7 +121,7 @@ start_tproxy() {
   fi
 
   # Bypass box itself
-  # ${iptables} -t mangle -A BOX_EXTERNAL -j RETURN -m mark --mark ${routing_mark}
+  # ${iptables} -t mangle -A BOX_EXTERNAL -m mark --mark ${routing_mark} -j RETURN
 
   # Bypass other if
   # Notice: Some interface is named with r_ / oem / nm_ / qcom_
@@ -234,7 +228,7 @@ start_tproxy() {
   if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
   fi
-  # ${iptables} -t mangle -I BOX_LOCAL -j RETURN -m mark --mark ${routing_mark}
+  # ${iptables} -t mangle -I BOX_LOCAL -m mark --mark ${routing_mark} -j RETURN
   # Disable kernel
   # ${iptables} -t mangle -A BOX_LOCAL -m owner ! --uid 0-99999999 -j DROP
 
@@ -265,7 +259,7 @@ start_tproxy() {
         ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
         ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
       fi
-      log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} has no transparent proxy."
+      log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} no transparent proxy."
     fi
   elif [ "${proxy_mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -290,6 +284,15 @@ start_tproxy() {
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     fi
     log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+  else
+    log "[warning]: proxy mode: ${proxy_mode}, error"
+    ${iptables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
+    if [ "${ipv6}" = "true" ] ; then
+      ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
+      ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
+    fi
+    log "[info]: transparent proxy for all apps."
   fi
 
   ${iptables} -t mangle -I OUTPUT -j BOX_LOCAL
@@ -411,11 +414,13 @@ if [ "${proxy_mode}" != "core" ] ; then
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
-      time find_packages_uid
+      find_packages_uid
       if [ "${network_mode}" = "TPROXY" ] ; then
         # if (zcat /proc/config.gz | grep -q TPROXY) ; then
         log "[info]: use TPROXY: TCP+UDP."
         log "[info]: creating iptables transparent proxy rules."
+        intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
+        intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
         time start_tproxy && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
         # else
         # log "[warning]: the device does not support TPROXY, please switch network_mode."
@@ -426,6 +431,8 @@ if [ "${proxy_mode}" != "core" ] ; then
       else
         [ "${network_mode}" = "REDIRECT" ] && log "[info]: use REDIRECT: TCP." || log "[info]: use MIXED: TCP+TUN."
         log "[info]: creating iptables transparent proxy rules."
+        intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
+        intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
         time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
         time forward -I
       fi
