@@ -11,14 +11,14 @@ ipv6() {
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    log "[info]: Ipv6: disable"
+    log info "Ipv6: disable"
   else
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
     echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    log "[info]: Ipv6: enable"
+    log info "Ipv6: enable"
   fi
 }
 
@@ -53,20 +53,20 @@ wait_bin_listen() {
 crontab_geo() {
   if [ ! "${update_interval}" = "false" ] ; then
     echo "${update_interval} ${scripts_dir}/box.tool subgeo." >> ${run_path}/root \
-    && log "[info]: crontab geo and subscription (${update_interval})."
-    log "[info]: geox (${auto_updategeox})."
-    log "[info]: subscription (${auto_updatesubcript})."
+    && log info "crontab geo and subscription (${update_interval})."
+    log info "geox (${auto_updategeox})."
+    log info "subscription (${auto_updatesubcript})."
   else
-    log "[info]: crontab geox & subscription is disable."
+    log info "crontab geox & subscription is disable."
   fi
 }
 
 start_listen() {
   if ! wait_bin_listen ; then
     if probe_bin_alive ; then
-      log "[error]: ${bin_name} service is running but may not listening."
+      log error "${bin_name} service is running but may not listening."
     else
-      log "[error]: listen, ${bin_name} port is not detected."
+      log error "listen, ${bin_name} port is not detected."
       kill $(cat ${pid_file})
       rm -f ${pid_file} && exit 1
     fi
@@ -79,7 +79,7 @@ detected_port() {
       return 0
     fi
   else
-    log "[info]: skip!!!! port detected."
+    log info "skip!!!! port detected."
   fi
 }
 
@@ -91,17 +91,17 @@ temporary_config_file() {
       sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${temporary_config_file}.swp
       sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
     else
-      log "[error]: ${clash_config} file is missing!!!." && exit 1
+      log error "${clash_config} file is missing!!!." && exit 1
     fi
   else
-    log "[error]: ${clash_template} file is missing !!!." && exit 1
+    log error "${clash_template} file is missing !!!." && exit 1
   fi
   mv ${temporary_config_file}.swp ${temporary_config_file} \
-  && log "[info]: merge config clash succes." || (log "[error]: merge config failed!!!." && exit 1)
+  && log info "merge config clash succes." || (log error "merge config failed!!!." && exit 1)
 }
 
 run_box() {
-  log "[info]: starting ${bin_name} service."
+  log info "starting ${bin_name} service."
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
@@ -113,7 +113,7 @@ run_box() {
         sleep 0.5
         start_listen
       else
-        log "[error]: configuration failed, please check the ${run_path}/error.log file." && exit 1
+        log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
       fi
       ;;
     clash)
@@ -132,7 +132,7 @@ run_box() {
         echo -n $! > ${pid_file}
       else
         mv ${temporary_config_file} ${clash_config}
-        log "[error]: configuration failed, please check the ${clash_config}." && exit 1
+        log error "configuration failed, please check the ${clash_config}." && exit 1
       fi
       ;;
     xray)
@@ -142,7 +142,7 @@ run_box() {
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
-        log "[error]: configuration failed, please check the ${run_path}/error.log file." && exit 1
+        log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
       fi
     ;;
     v2fly)
@@ -152,11 +152,11 @@ run_box() {
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
-        log "[error]: configuration failed, please check the ${run_path}/error.log file." && exit 1
+        log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
       fi
       ;;
     *)
-      log "[error]: kernel error." && exit 1
+      log error "kernel error." && exit 1
       ;;
   esac
   rm -rf ${run_path}/error.log
@@ -167,17 +167,17 @@ cgroup_limit() {
     if ! (${scripts_dir}/box.tool cgroup) ; then
       return 0
     else
-      log "[info]: cgroup limit: ${cgroup_memory_limit}."
+      log info "cgroup limit: ${cgroup_memory_limit}."
     fi
   fi
 }
 
 display_bin_pid() {
   if probe_bin_alive ; then
-    log "[Info]: ${bin_name} has started with the $(stat -c %U:%G /proc/$(pidof ${bin_name})) user group."
-    log "[info]: ${bin_name} service is running. ( PID: $(pidof ${bin_name}) )."
+    log info "${bin_name} has started with the $(stat -c %U:%G /proc/$(pidof ${bin_name})) user group."
+    log info "${bin_name} service is running. ( PID: $(pidof ${bin_name}) )."
   else
-    log "[warning]: ${bin_name} service is stopped."
+    log warn "${bin_name} service is stopped."
   fi
 }
 
@@ -197,10 +197,10 @@ start_box() {
   echo -n "" > ${logs_file}
   echo $(date) >> ${logs_file}
   if probe_bin_alive ; then
-    log "[warning]: ${bin_name} service masih berjalan." && exit 1
+    log warn "${bin_name} service masih berjalan." && exit 1
   fi
   if [ ! -f ${bin_path} ] ; then
-    log "[info]: kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1
+    log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1
   fi
   chown 0:3005 ${bin_path}
   chmod 0700 ${bin_path}
@@ -214,13 +214,13 @@ start_box() {
     ${busybox_path} crontab -c ${run_path} -r
     touch ${run_path}/root && chmod 0600 ${run_path}/root
     if ! (${bin_path} -v >> ${logs_file}) ; then
-      log "[error]: kernel ${bin_name} corrupted." && exit 1
+      log error "kernel ${bin_name} corrupted." && exit 1
     fi
-    log "[info]: konfigurasi ${clash_config}."
+    log info "konfigurasi ${clash_config}."
     crontab_geo
   else
     if ! (${bin_path} version >> ${logs_file}) ; then
-      log "[error]: kernel ${bin_name} corrupted." && exit 1
+      log error "kernel ${bin_name} corrupted." && exit 1
     fi
   fi
   ipv6

@@ -9,9 +9,9 @@ restart_clash() {
   sleep 0.5
   ${scripts_dir}/box.iptables enable
   if [ "$?" == "0" ] ; then
-    log "[info]: $(date) ${bin_name} restart"
+    log info "$(date) ${bin_name} restart"
   else
-    log "[error]: ${bin_name} failed to restart."
+    log error "${bin_name} failed to restart."
   fi
 }
 
@@ -77,10 +77,10 @@ port_detection() {
   if (ss -h > /dev/null 2>&1) ; then
     port=$(ss -antup | grep "${bin_name}" | ${busybox_path} awk '$7~/'pid=$(pidof ${bix_bin_name})*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
   else
-    log "[info]: skip port detected"
+    log info "skip port detected"
     exit 0
   fi
-  logs "[info]: port detected: "
+  logs info "port detected: "
   for sub_port in ${port[@]} ; do
     sleep 0.5
     echo -n "${sub_port} / " >> ${logs_file}
@@ -94,7 +94,7 @@ update_kernel() {
   file_kernel="clash.${arch}"
   tag="Prerelease-Alpha"
   tag_name="alpha-[0-9,a-z]+"
-  url_meta="https://github.com/taamarin/Clash.Meta/releases"
+  url_meta="https://github.com/MetaCubeX/Clash.Meta/releases"
 
   tag_meta=$(curl -fsSL ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
   filename="Clash.Meta-${platform}-${arch}-${tag_meta}"
@@ -108,20 +108,20 @@ update_kernel() {
         if ! (rm -rf ${data_dir}/${file_kernel}.gz.bak) ; then
           rm -rf ${data_dir}/${file_kernel}.gz
         fi
-        log "[warning]: gunzip ${file_kernel}.gz failed" 
+        log warn "gunzip ${file_kernel}.gz failed" 
       else
         mv -f ${data_dir}/${file_kernel} ${data_dir}/kernel/clash && flag="true"
         if [ -f "${pid_file}" ] && [ "${flag}" == "true" ] ; then
           restart_clash
         else
-          log "[warning]: ${bin_name} tidak dimulai ulang"
+          log warn "${bin_name} tidak dimulai ulang"
         fi
       fi
     else
-      log "[error]: gunzip not found" 
+      log error "gunzip not found" 
     fi
   else
-    log "[warning]: download ${file_kernel}.gz failed" 
+    log warn "download ${file_kernel}.gz failed" 
   fi
 }
 
@@ -135,9 +135,9 @@ cgroup_limit() {
 
   mkdir -p "${cgroup_memory_path}/${bin_name}"
   echo $(cat ${pid_file}) > "${cgroup_memory_path}/${bin_name}/cgroup.procs" \
-  && log "[info]: ${cgroup_memory_path}/${bin_name}/cgroup.procs"  
+  && log info "${cgroup_memory_path}/${bin_name}/cgroup.procs"  
   echo "${cgroup_memory_limit}" > "${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes" \
-  && log "[info]: ${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes"
+  && log info "${cgroup_memory_path}/${bin_name}/memory.limit_in_bytes"
 }
 
 update_dashboard() {

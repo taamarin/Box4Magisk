@@ -59,7 +59,7 @@ start_redirect() {
     if [ "$(cat ${uid_list[@]})" = "" ] ; then
       # Route Everything
       ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
-      log "[info]: transparent proxy for all apps."
+      log info "transparent proxy for all apps."
     else
       # Bypass apps
       for appid in $(cat ${uid_list[@]}) ; do
@@ -67,7 +67,7 @@ start_redirect() {
       done
       # Allow !app
       ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
-      log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} no transparent proxy."
+      log info "proxy mode: ${proxy_mode} ${packages_list[@]} no transparent proxy."
     fi
   elif [ "${proxy_mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -76,11 +76,11 @@ start_redirect() {
     done
     ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${redir_port}
     ${iptables} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${redir_port}
-    log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+    log info "proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
   else
-    log "[warning]: proxy mode: ${proxy_mode}, erro."
+    log warn "proxy mode: ${proxy_mode}, error."
     ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
-    log "[info]: transparent proxy for all apps."
+    log info "transparent proxy for all apps."
   fi
 
   ${iptables} -t nat -I OUTPUT -j BOX_LOCAL
@@ -241,7 +241,7 @@ start_tproxy() {
         ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
         ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
       fi
-      log "[info]: transparent proxy for all apps."
+      log info "transparent proxy for all apps."
     else
       # Bypass apps
       for appid in $(cat ${uid_list[@]}) ; do
@@ -259,7 +259,7 @@ start_tproxy() {
         ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
         ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
       fi
-      log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} no transparent proxy."
+      log info "proxy mode: ${proxy_mode} ${packages_list[@]} no transparent proxy."
     fi
   elif [ "${proxy_mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -283,16 +283,16 @@ start_tproxy() {
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     fi
-    log "[info]: proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
+    log info "proxy mode: ${proxy_mode} ${packages_list[@]} transparent proxy."
   else
-    log "[warning]: proxy mode: ${proxy_mode}, error"
+    log warn "proxy mode: ${proxy_mode}, error"
     ${iptables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
     ${iptables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
     if [ "${ipv6}" = "true" ] ; then
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${id}
     fi
-    log "[info]: transparent proxy for all apps."
+    log info "transparent proxy for all apps."
   fi
 
   ${iptables} -t mangle -I OUTPUT -j BOX_LOCAL
@@ -417,32 +417,32 @@ if [ "${proxy_mode}" != "core" ] ; then
       find_packages_uid
       if [ "${network_mode}" = "TPROXY" ] ; then
         # if (zcat /proc/config.gz | grep -q TPROXY) ; then
-        log "[info]: use TPROXY: TCP+UDP."
-        log "[info]: creating iptables transparent proxy rules."
+        log info "use TPROXY: TCP+UDP."
+        log info "creating iptables transparent proxy rules."
         intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
         intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
-        time start_tproxy && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+        time start_tproxy && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
         # else
-        # log "[warning]: the device does not support TPROXY, please switch network_mode."
-        # log "[info]: use REDIRECT: TCP."
-        # log "[info]: creating iptables transparent proxy rules."
-        # time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+        # log warn "the device does not support TPROXY, please switch network_mode."
+        # log info "use REDIRECT: TCP."
+        # log info "creating iptables transparent proxy rules."
+        # time start_redirect && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
         # fi
       else
-        [ "${network_mode}" = "REDIRECT" ] && log "[info]: use REDIRECT: TCP." || log "[info]: use MIXED: TCP+TUN."
-        log "[info]: creating iptables transparent proxy rules."
+        [ "${network_mode}" = "REDIRECT" ] && log info "use REDIRECT: TCP." || log info "use MIXED: TCP+TUN."
+        log info "creating iptables transparent proxy rules."
         intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
         intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
-        time start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+        time start_redirect && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
         time forward -I
       fi
       ;;
     disable)
-      log "[warning]: cleaning up iptables transparent proxy rules."
+      log warn "cleaning up iptables transparent proxy rules."
       time stop_tproxy
       time stop_redirect
       time forward -D
-      log "[warning]: clean up iptables transparent proxy rules done."
+      log warn "clean up iptables transparent proxy rules done."
       ;;
     *)
       echo "$0:  usage:  $0 {enable|disable}"
@@ -455,13 +455,13 @@ else
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
       time forward -I
-      log "[info]: proxy_mode: ${proxy_mode} disable transparent proxy."
+      log info "proxy_mode: ${proxy_mode} disable transparent proxy."
       ;;
     disable)
       stop_tproxy  >> /dev/null 2>&1
       stop_redirect  >> /dev/null 2>&1
       time forward -D
-      log "[warning]: cleaning up proxy rules."
+      log warn "cleaning up proxy rules."
       ;;
     *)
       echo "$0:  usage: $0 {enable|disable}"
