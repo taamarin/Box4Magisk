@@ -108,7 +108,7 @@ run_box() {
       sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
       # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
       if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${sing_path_dir} -c ${sing_config} > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${sing_path_dir} -c ${sing_config} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
         sleep 0.5
         start_listen
@@ -128,7 +128,7 @@ run_box() {
       fi
       temporary_config_file
       if ${bin_path} -t -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/${bin_name}.log 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/${bin_name}.log 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         mv ${temporary_config_file} ${clash_config}
@@ -139,7 +139,7 @@ run_box() {
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${xray_config}
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -149,7 +149,7 @@ run_box() {
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${v2fly_config}
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -202,10 +202,12 @@ start_box() {
   if [ ! -f ${bin_path} ] ; then
     log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1
   fi
-  chown 0:3005 ${bin_path}
+
+  chown ${box_user_group} ${bin_path}
   chmod 0700 ${bin_path}
-  chown 0:3005 ${data_dir}/${bin_name}/*
+  chown ${box_user_group} ${data_dir}/${bin_name}/*
   chmod 0700 ${data_dir}/${bin_name}/*
+
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
   #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
 

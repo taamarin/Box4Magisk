@@ -77,13 +77,13 @@ port_detection() {
   if (ss -h > /dev/null 2>&1) ; then
     port=$(ss -antup | grep "${bin_name}" | ${busybox_path} awk '$7~/'pid=$(pidof ${bix_bin_name})*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
   else
-    log info "skip port detected"
+    log info "skip!!! port detected"
     exit 0
   fi
   logs info "port detected: "
   for sub_port in ${port[@]} ; do
     sleep 0.5
-    echo -n "${sub_port} / " >> ${logs_file}
+    echo -n "${sub_port} " >> ${logs_file}
   done
   echo "" >> ${logs_file}
 }
