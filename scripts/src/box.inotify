@@ -20,7 +20,7 @@ create_run() {
 service_control() {
   if [ "${monitor_file}" = "disable" ]; then
     if [ "${events}" = "d" ]; then
-      rm -rf /data/adb/box/run/*
+      # rm -rf /data/adb/box/run/*
       ${service_path} start &> ${log_path} && ${iptables_path} enable &>> ${log_path} &
     elif [ "${events}" = "n" ]; then
       ${service_path} stop &>> ${log_path} && ${iptables_path} disable &>> ${log_path} &

@@ -419,8 +419,6 @@ if [ "${proxy_mode}" != "core" ] ; then
         # if (zcat /proc/config.gz | grep -q TPROXY) ; then
         log info "use TPROXY: TCP+UDP."
         log info "creating iptables transparent proxy rules."
-        intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-        intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
         time start_tproxy && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
         # else
         # log warn "the device does not support TPROXY, please switch network_mode."
@@ -431,8 +429,6 @@ if [ "${proxy_mode}" != "core" ] ; then
       else
         [ "${network_mode}" = "REDIRECT" ] && log info "use REDIRECT: TCP." || log info "use MIXED: TCP+TUN."
         log info "creating iptables transparent proxy rules."
-        intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-        intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
         time start_redirect && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
         time forward -I
       fi

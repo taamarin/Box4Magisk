@@ -73,6 +73,18 @@ update_subgeo() {
 }
 
 port_detection() {
+  logs() {
+    export TZ=Asia/Jakarta
+    now=$(date +"[%H:%M %z]")
+    case $1 in
+    info)
+      echo -n "\033[1;33m${now} [info]: $2\033[0m" | tee -a ${logs_file}
+      ;;
+    *)
+      echo -n "\033[1;30m${now} [$1]: $2\033[0m" | tee -a ${logs_file}
+      ;;
+    esac
+  }
   match_count=0
   if (ss -h > /dev/null 2>&1) ; then
     port=$(ss -antup | grep "${bin_name}" | ${busybox_path} awk '$7~/'pid=$(pidof ${bix_bin_name})*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
