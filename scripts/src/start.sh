@@ -1,23 +1,23 @@
 #!/system/bin/sh
 
 moddir="/data/adb/modules/box_for_magisk"
-if [ -n "$(magisk -v | grep lite)" ]; then
+if [ -n "$(magisk -v | grep lite)" ] ; then
   moddir=/data/adb/lite_modules/box_for_magisk
 fi
 
 scripts_dir="/data/adb/box/scripts"
 
 refresh_box() {
-  if [ -f ${box_pid_file} ]; then
+  if [ -f /data/adb/box/run/box.pid ] ; then
     ${scripts_dir}/box.service stop && ${scripts_dir}/box.iptables disable
   fi
 }
 
 start_service() {
-  if [ ! -f /data/adb/box/manual ]; then
-    if [ ! -f ${moddir}/disable ]; then
+  if [ ! -f /data/adb/box/manual ] ; then
+    if [ ! -f ${moddir}/disable ] ; then
       ${scripts_dir}/box.service start
-      if [ -f /data/adb/box/run/*.pid ]; then
+      if [ -f /data/adb/box/run/box.pid ] ; then
         ${scripts_dir}/box.iptables enable
       fi
     fi
