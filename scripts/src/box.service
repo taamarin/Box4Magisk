@@ -197,6 +197,10 @@ create_tun() {
 
 start_box() {
   echo -n "" > ${logs_file}
+  if rm -rf /data/adb/box/run/root ; then
+    rm -rf /data/adb/box/run/config.yaml
+    rm -rf /data/adb/box/run/clash.log
+  fi
   echo $(date) >> ${logs_file}
   if probe_bin_alive ; then
     log warn "${bin_name} service masih berjalan." && exit 1
@@ -231,6 +235,7 @@ start_box() {
   create_tun
   run_box
   cgroup_limit
+  sleep 1
   detected_port
   display_bin_pid
 }

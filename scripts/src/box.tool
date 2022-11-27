@@ -78,16 +78,16 @@ port_detection() {
     now=$(date +"[%H:%M %z]")
     case $1 in
     info)
-      [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file}
+      [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
       ;;
     *)
-      [ -t 1 ] && echo -n "\033[1;30m${now} [$1]: $2\033[0m" || echo -n "${now} [$1]: $2" | tee -a ${logs_file}
+      [ -t 1 ] && echo -n "\033[1;30m${now} [$1]: $2\033[0m" || echo -n "${now} [$1]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
       ;;
     esac
   }
   match_count=0
   if (ss -h > /dev/null 2>&1) ; then
-    port=$(ss -antup | grep "${bin_name}" | ${busybox_path} awk '$7~/'pid=$(pidof ${bix_bin_name})*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
+    port=$(ss -antup | grep "${bin_name}" | ${busybox_path} awk '$7~/'pid=$(pidof ${bin_name})*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
   else
     log info "skip!!! port detected"
     exit 0
