@@ -78,10 +78,10 @@ port_detection() {
     now=$(date +"[%H:%M %z]")
     case $1 in
     info)
-      echo -n "\033[1;33m${now} [info]: $2\033[0m" | tee -a ${logs_file}
+      [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file}
       ;;
     *)
-      echo -n "\033[1;30m${now} [$1]: $2\033[0m" | tee -a ${logs_file}
+      [ -t 1 ] && echo -n "\033[1;30m${now} [$1]: $2\033[0m" || echo -n "${now} [$1]: $2" | tee -a ${logs_file}
       ;;
     esac
   }
