@@ -15,6 +15,10 @@ restart_clash() {
   fi
 }
 
+res() {
+  ps -p $(pidof ${bin_name}) -o pid,uid,gid,rss,vsz,%cpu,time,start_time,etime,stat,cmd
+}
+
 update_file() {
   file="$1"
   file_bak="${file}.bak"
@@ -93,7 +97,7 @@ port_detection() {
     exit 0
   fi
   logs info "port detected: "
-  for sub_port in ${port[@]} ; do
+  for sub_port in ${port[*]} ; do
     sleep 0.5
     echo -n "${sub_port} " >> ${logs_file}
   done
@@ -177,6 +181,9 @@ case "$1" in
     ;;
   upyacd)
     update_dashboard
+    ;;
+  res)
+    res
     ;;
   *)
     echo "$0:  usage:  $0 {upyacd|upcore|cgroup|port|subgeo}"

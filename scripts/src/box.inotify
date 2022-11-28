@@ -20,11 +20,11 @@ create_run() {
 service_control() {
   if [ "${monitor_file}" = "disable" ]; then
     if [ "${events}" = "d" ]; then
-      ${service_path} start > ${run_path}/service.log 2> ${run_path}/service_error.log && \
-      ${iptables_path} enable >> ${run_path}/service.log 2>> ${run_path}/service_error.log
+      ${service_path} start >> /dev/null 2> ${run_path}/service.log && \
+      ${iptables_path} enable >> /dev/null 2>> ${run_path}/service.log
     elif [ "${events}" = "n" ]; then
-      ${iptables_path} disable >> ${run_path}/service.log 2>> ${run_path}/service_error.log && \
-      ${service_path} stop >> ${run_path}/service.log 2>> ${run_path}/service_error.log
+      ${iptables_path} disable >> /dev/null 2>> ${run_path}/service.log && \
+      ${service_path} stop >> /dev/null 2>> ${run_path}/service.log
     fi
   fi
 }
