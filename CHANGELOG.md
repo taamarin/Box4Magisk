@@ -1,4 +1,9 @@
 #### ⟳ Changelog v4.5.2
+- fix log output
+- Add some log output
+- Fix black and white list log output
+
+#### ⟳ Changelog v4.5.2
 - Add colored log output in terminal
 - Add custom user group
 - Changes pid file
