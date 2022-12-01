@@ -60,7 +60,7 @@ start_redirect() {
     log info "${ignore_out_list[*]} ignore transparent proxy."
   fi
 
-  if [ "${proxy_mode}" = "daftar hitam" ] ; then
+  if [ "${proxy_mode}" = "blacklist" ] ; then
     if [ "$(cat ${uid_list[*]})" = "" ] ; then
       # Route Everything
       ${iptables} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
@@ -474,7 +474,8 @@ else
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
       time forward -I
-      log info "proxy_mode: ${proxy_mode} disable transparent proxy."
+      log info "proxy_mode: ${proxy_mode}, disable transparent proxy."
+      log info "use TUN: TCP+UDP."
       ;;
     disable)
       stop_tproxy  >> /dev/null 2>&1

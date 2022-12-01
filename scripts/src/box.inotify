@@ -12,8 +12,8 @@ monitor_dir=$2
 monitor_file=$3
 
 create_run() {
-  if [ ! -d /data/adb/box/run ]; then
-    mkdir -p /data/adb/box/run
+  if [ ! -d "${run_path}" ]; then
+    mkdir -p ${run_path}
   fi
 }
 

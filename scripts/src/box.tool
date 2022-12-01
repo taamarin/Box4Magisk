@@ -4,11 +4,15 @@ scripts=$(realpath $0)
 scripts_dir=$(dirname ${scripts})
 source /data/adb/box/settings.ini
 
-restart_clash() {
+restart_box() {
+  probe_bin_alive() {
+     [ -f ${pid_file} ] && cmd_file="/proc/$(pidof ${bin_name})/cmdline" || return 1
+     [ -f ${cmd_file} ] && grep -q ${bin_name} ${cmd_file} && return 0 || return 1
+  }
+  ${scripts_dir}/box.service stop
   ${scripts_dir}/box.service start
-  sleep 0.5
-  ${scripts_dir}/box.iptables enable
-  if [ "$?" == "0" ] ; then
+  if probe_bin_alive ; then
+    ${scripts_dir}/box.iptables enable
     log info "$(date) ${bin_name} restart"
   else
     log error "${bin_name} failed to restart."
@@ -26,8 +30,8 @@ update_file() {
   if [ -f ${file} ] ; then
     mv -f ${file} ${file_bak}
   fi
-  echo "curl -k --insecure -L -A 'clash' ${update_url} -o ${file}"
-  curl -k --insecure -L -A 'clash' ${update_url} -o ${file} 2>&1
+  echo "curl -k --insecure -L -A '${bin_name}' ${update_url} -o ${file}"
+  curl -k --insecure -L -A '${bin_name}' ${update_url} -o ${file} 2>&1
   sleep 0.5
   if [ -f "${file}" ] ; then
     echo ""
@@ -72,14 +76,14 @@ update_subgeo() {
     fi
   fi
   if [ -f "${pid_file}" ] && [ ${flag} == true ] ; then
-    restart_clash
+    restart_box
   fi
 }
 
 port_detection() {
   logs() {
     export TZ=Asia/Jakarta
-    now=$(date +"[%H:%M %z]")
+    now=$(date "+%H:%M %Z")
     case $1 in
     info)
       [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
@@ -105,39 +109,85 @@ port_detection() {
 }
 
 update_kernel() {
-  arch="arm64"
-  platform="android"
-  file_kernel="clash.${arch}"
-  tag="Prerelease-Alpha"
-  tag_name="alpha-[0-9,a-z]+"
-  url_meta="https://github.com/MetaCubeX/Clash.Meta/releases"
-
-  tag_meta=$(curl -fsSL ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
-  filename="Clash.Meta-${platform}-${arch}-${tag_meta}"
-  if update_file ${data_dir}/${file_kernel}.gz ${url_meta}/download/${tag}/${filename}.gz; then
-    flag="true"
+  arc=$(uname -m)
+  if [ "${arc}" = "aarch64" ] ; then
+    arch="arm64"
+    platform="android"
+  else
+    arch="armv7"
+    platform="linux"
   fi
-
-  if [ "${flag}" == "true" ] ; then
-    if (gunzip --help > /dev/null 2>&1) ; then
-      if ! (gunzip ${data_dir}/${file_kernel}.gz) ; then
-        if ! (rm -rf ${data_dir}/${file_kernel}.gz.bak) ; then
-          rm -rf ${data_dir}/${file_kernel}.gz
-        fi
-        log warn "gunzip ${file_kernel}.gz failed" 
+  file_kernel="${bin_name}-${arch}"
+  case "${bin_name}" in
+    sing-box)
+      download_link="https://github.com/taamarin/sing-box/releases"
+      github_api="https://api.github.com/repos/taamarin/sing-box/releases"
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9,a-z].[0-9,a-z].[0-9,a-z].[0-9,a-z]*")
+      download_file="sing-box-${platform}-${arch}-${latest_version}.gz"
+      update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/${latest_version}/${download_file}
+      ;;
+    clash)
+      # true for clash.meta, false for clash.premium
+      meta="false"
+      if [ "${meta}" = "true" ] ; then
+        tag="Prerelease-Alpha"
+        tag_name="alpha-[0-9,a-z]+"
+        download_link="https://github.com/taamarin/Clash.Meta/releases"
+        latest_version=$(curl -fsSL ${download_link}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
+        filename="Clash.Meta-${platform}-${arch}-${latest_version}"
+        update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/${tag}/${filename}.gz
       else
-        mv -f ${data_dir}/${file_kernel} ${data_dir}/kernel/clash && flag="true"
-        if [ -f "${pid_file}" ] && [ "${flag}" == "true" ] ; then
-          restart_clash
-        else
-          log warn "${bin_name} tidak dimulai ulang"
-        fi
+        download_link="https://release.dreamacro.workers.dev/latest"
+        update_file ${data_dir}/${file_kernel}.gz ${download_link}/clash-linux-${arch}-latest.gz
       fi
+      ;;
+    xray)
+      download_link="https://github.com/XTLS/Xray-core/releases"
+      github_api="https://api.github.com/repos/XTLS/Xray-core/releases"
+      latest_version=$(curl -ks ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      if [ "${arc}" != "aarch64" ] ; then
+        download_file="Xray-linux-arm32-v7a.zip"
+      else
+        download_file="Xray-android-arm64-v8a.zip"
+      fi
+      update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
+      unzip -j -o "${data_dir}/${file_kernel}.zip" "xray" -d ${bin_kernel} >&2
+      restart_box && exit 0
+    ;;
+    v2fly)
+      download_link="https://github.com/v2fly/v2ray-core/releases"
+      github_api="https://api.github.com/repos/v2fly/v2ray-core/releases"
+      latest_version=$(curl -ks ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      if [ "${arc}" != "aarch64" ] ; then
+        download_file="v2ray-linux-arm32-v7a.zip"
+      else
+        download_file="v2ray-android-arm64-v8a.zip"
+      fi
+      update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
+      unzip -j -o "${data_dir}/${file_kernel}.zip" "v2ray" -d ${bin_kernel} >&2 \
+      && mv ${bin_kernel}/v2ray ${bin_kernel}/v2fly || log error "failed replace"
+      restart_box && exit 0
+      ;;
+    *)
+      log error "kernel error." && exit 1
+      ;;
+  esac
+  if (gunzip --help > /dev/null 2>&1) ; then
+    if ! (gunzip ${data_dir}/${file_kernel}.gz) ; then
+      if ! (rm -rf ${data_dir}/${file_kernel}.gz.bak) ; then
+        rm -rf ${data_dir}/${file_kernel}.gz
+      fi
+      log warn "gunzip ${file_kernel}.gz failed" 
     else
-      log error "gunzip not found" 
+      mv -f ${data_dir}/${file_kernel} ${bin_kernel}/${bin_name} && flag="true"
+      if [ -f "${pid_file}" ] && [ "${flag}" == "true" ] ; then
+        restart_box
+      else
+        log warn "${bin_name} tidak dimulai ulang"
+      fi
     fi
   else
-    log warn "download ${file_kernel}.gz failed" 
+    log error "gunzip not found" 
   fi
 }
 

@@ -27,8 +27,8 @@ mkdir -p /data/adb/box/bin
 mkdir -p /data/adb/box/dashboard
 mkdir -p /data/adb/box/run
 mkdir -p /data/adb/box/scripts
-mkdir -p /data/adb/box/xray/confs
-mkdir -p /data/adb/box/v2fly/confs
+mkdir -p /data/adb/box/xray
+mkdir -p /data/adb/box/v2fly
 mkdir -p /data/adb/box/sing-box
 mkdir -p /data/adb/box/clash
 
@@ -65,8 +65,8 @@ mv ${MODPATH}/scripts/src/* /data/adb/box/scripts/
 mv ${MODPATH}/scripts/clash/* /data/adb/box/clash/
 mv ${MODPATH}/scripts/settings.ini /data/adb/box/
 mv ${MODPATH}/scripts/template.ini /data/adb/box/
-mv ${MODPATH}/scripts/xray/confs /data/adb/box/xray/
-mv ${MODPATH}/scripts/v2fly/confs /data/adb/box/v2fly/
+mv ${MODPATH}/scripts/xray /data/adb/box/
+mv ${MODPATH}/scripts/v2fly /data/adb/box/
 mv ${MODPATH}/scripts/sing-box /data/adb/box/
 
 rm -rf ${MODPATH}/scripts
