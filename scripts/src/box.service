@@ -118,8 +118,8 @@ run_box() {
       else
         sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
       fi
-      if ${bin_path} check -D ${data_dir}/sing-box -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box -c ${data_dir}/sing-box/config.json > /dev/null 2> ${run_path}/${bin_name}.log &
+      if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
         sleep 0.5
         start_listen
