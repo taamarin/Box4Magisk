@@ -1,3 +1,6 @@
+#### ⟳ Changelog v4.5.5
+- fix run `sing-box`
+
 #### ⟳ Changelog v4.5.4
 - add tool update kernel `su -c /data/adb/box/scripts/box.tool upcore`
 - adjust dir scripts
