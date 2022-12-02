@@ -1,3 +1,7 @@
+#### ⟳ Changelog v4.5.4
+- add tool update kernel `su -c /data/adb/box/scripts/box.tool upcore`
+- adjust dir scripts
+
 #### ⟳ Changelog v4.5.3
 - fix log output
 - Add some log output
