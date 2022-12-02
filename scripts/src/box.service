@@ -118,8 +118,8 @@ run_box() {
       else
         sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
       fi
-      if ${bin_path} check -D ${sing_path_dir} -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${sing_path_dir} -c ${sing_config} > /dev/null 2> ${run_path}/${bin_name}.log &
+      if ${bin_path} check -D ${data_dir}/sing-box -c ${sing_config} > ${run_path}/error.log 2>&1 ; then
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box -c ${data_dir}/sing-box/config.json > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
         sleep 0.5
         start_listen
@@ -148,12 +148,12 @@ run_box() {
       ;;
     xray)
       sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
-      if [ ! -f ${xray_config}/*.json ] ; then
-        log error "file ${xray_config}/*.json no found"
+      if [ ! -f ${data_dir}/xray/*.json ] ; then
+        log error "file ${data_dir}/xray/*.json no found"
         exit 0
       fi
       export XRAY_LOCATION_ASSET=${data_dir}/xray
-      export XRAY_LOCATION_CONFDIR=${xray_config}
+      export XRAY_LOCATION_CONFDIR=${data_dir}/xray
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
@@ -163,12 +163,12 @@ run_box() {
     ;;
     v2fly)
       sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
-      if [ ! -f ${v2fly_config}/*.json ] ; then
-        log error "file ${v2fly_config}/*.json no found"
+      if [ ! -f ${data_dir}/v2fly/*.json ] ; then
+        log error "file ${data_dir}/*.json no found"
         exit 0
       fi  
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
-      export V2RAY_LOCATION_CONFDIR=${v2fly_config}
+      export V2RAY_LOCATION_CONFDIR=${data_dir}/v2fly
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
@@ -233,14 +233,16 @@ start_box() {
   #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
 
   if [ "${bin_name}" = "clash" ] ; then
-    nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
-    ${busybox_path} crontab -c ${run_path} -r
-    touch ${run_path}/root && chmod 0600 ${run_path}/root
     if ! (${bin_path} -v >> ${logs_file}) ; then
       log error "kernel ${bin_name} corrupted." && exit 1
     fi
-    log info "konfigurasi ${clash_config}."
-    crontab_geo
+    if [ "${update_interval}" != "false" ] ; then
+      nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
+      ${busybox_path} crontab -c ${run_path} -r
+      touch ${run_path}/root && chmod 0600 ${run_path}/root
+      log info "konfigurasi ${clash_config}."
+      crontab_geo
+    fi
   else
     if ! (${bin_path} version >> ${logs_file}) ; then
       log error "kernel ${bin_name} corrupted." && exit 1

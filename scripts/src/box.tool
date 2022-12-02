@@ -65,17 +65,17 @@ update_subgeo() {
     ;;
   esac
 
-  if [ "${auto_updategeox}" == "true" ] ; then
+  if [ "${auto_updategeox}" = "true" ] ; then
     if update_file ${geoip_file} ${geoip_url} && update_file ${geosite_file} ${geosite_url} ; then
       flag=false
     fi
   fi
-  if [ ${auto_updatesubcript} == "true" ] ; then
+  if [ ${auto_updatesubcript} = "true" ] ; then
     if update_file ${clash_config} ${subcript_url} ; then
       flag=true
     fi
   fi
-  if [ -f "${pid_file}" ] && [ ${flag} == true ] ; then
+  if [ -f "${pid_file}" ] && [ ${flag} = true ] ; then
     restart_box
   fi
 }
@@ -180,7 +180,7 @@ update_kernel() {
       log warn "gunzip ${file_kernel}.gz failed" 
     else
       mv -f ${data_dir}/${file_kernel} ${bin_kernel}/${bin_name} && flag="true"
-      if [ -f "${pid_file}" ] && [ "${flag}" == "true" ] ; then
+      if [ -f "${pid_file}" ] && [ "${flag}" = "true" ] ; then
         restart_box
       else
         log warn "${bin_name} tidak dimulai ulang"
@@ -192,10 +192,10 @@ update_kernel() {
 }
 
 cgroup_limit() {
-  if [ "${cgroup_memory_limit}" == "" ] ; then
+  if [ "${cgroup_memory_limit}" = "" ] ; then
     return
   fi
-  if [ "${cgroup_memory_path}" == "" ] ; then
+  if [ "${cgroup_memory_path}" = "" ] ; then
     cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
   fi
 
