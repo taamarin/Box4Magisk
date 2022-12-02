@@ -71,21 +71,6 @@
       "sniff_timeout": "300ms",
       "domain_strategy": "prefer_ipv4",
       "udp_timeout": 300
-    },
-    {
-      "type": "tun",
-      "tag": "tun-in",
-      "interface_name": "utun",
-      "inet4_address": "172.19.0.1/30",
-      "inet6_address": "fdfe:dcba:9876::1/126",
-      "mtu": 30000,
-      "stack": "system",
-      "auto_route": true,
-      "strict_route": false,
-      "endpoint_independent_nat": false,
-      "sniff": true,
-      "sniff_override_destination": true,
-      "domain_strategy": "prefer_ipv4"
     }
   ],
   "outbounds": [
@@ -131,16 +116,16 @@
         "outbound": "direct-out"
       }
     ],
-    "find_process": true,
+    "find_process": false,
     "auto_detect_interface": false,
-    "override_android_vpn": false,
+    "override_android_vpn": false
   },
   "experimental": {
     "clash_api": {
       "external_controller": "0.0.0.0:9090",
       "external_ui": "../dashboard/dist",
       "secret": "",
-      "store_selected": true
+      "store_selected": false
     }
   }
 }

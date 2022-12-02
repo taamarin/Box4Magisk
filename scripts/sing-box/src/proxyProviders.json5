@@ -5,12 +5,11 @@
     target: 'proxy',
     shown: true,
     urltest: {
-      shown: true,
-      url: '',
+      shown: false,
+      url: 'http://cp.cloudflare.com/generate_204',
       interval: '1m',
       tolerance: 100,
     },
-    maxEarlyDataLimit: true,
     xray: false,
   },
 ]
