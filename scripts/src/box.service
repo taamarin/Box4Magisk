@@ -91,19 +91,19 @@ detected_port() {
 }
 
 temporary_config_file() {
-  sed -i '/^[  ]*$/d' ${clash_template}
-  if [ -f "${clash_template}" ] ; then
+  sed -i '/^[  ]*$/d' ${data_dir}/template.ini
+  if [ -f "${data_dir}/template.ini" ] ; then
     if [ -f "${clash_config}" ] ; then
-      cp -f ${clash_template} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
-      sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${temporary_config_file}.swp
-      sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
+      cp -f ${data_dir}/template.ini ${data_dir}/run/config.yaml.swp && echo "\n" >> ${data_dir}/run/config.yaml.swp
+      sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${data_dir}/run/config.yaml.swp
+      sed -i '/^[  ]*$/d' ${data_dir}/run/config.yaml.swp
     else
       log error "${clash_config} file is missing!!!." && exit 1
     fi
   else
-    log error "${clash_template} file is missing !!!." && exit 1
+    log error "${data_dir}/template.ini file is missing !!!." && exit 1
   fi
-  mv ${temporary_config_file}.swp ${temporary_config_file} \
+  mv ${data_dir}/run/config.yaml.swp ${data_dir}/run/config.yaml \
   && log info "merge config clash succes." || (log error "merge config failed!!!." && exit 1)
 }
 
@@ -112,12 +112,12 @@ run_box() {
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
-      if [ "${proxy_mode}" == "core" ] ; then
-        sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true,/' ${sing_config}
-      else
-        sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
-      fi
+      # sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
+      # if [ "${proxy_mode}" == "core" ] ; then
+        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true,/' ${sing_config}
+      # else
+        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
+      # fi
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
@@ -130,19 +130,19 @@ run_box() {
     clash)
       if [ "${clash_tun_status}" = "true" ] ; then
         sed -i 's/network_mode=.*/network_mode="MIXED"/' ${settings}
-        sed -i 's/auto-route:.*/auto-route: true/' ${clash_template}
-        sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' ${clash_template}
+        sed -i 's/auto-route:.*/auto-route: true/' ${data_dir}/template.ini
+        sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' ${data_dir}/template.ini
       else
         sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
-        sed -i 's/auto-route:.*/auto-route: false/' ${clash_template}
-        sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' ${clash_template}
+        sed -i 's/auto-route:.*/auto-route: false/' ${data_dir}/template.ini
+        sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' ${data_dir}/template.ini
       fi
       temporary_config_file
-      if ${bin_path} -t -d ${data_dir}/clash -f ${temporary_config_file} > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} -d ${data_dir}/clash -f ${temporary_config_file} > /dev/null 2> ${run_path}/${bin_name}.log &
+      if ${bin_path} -t -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/error.log ; then
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
-        mv ${temporary_config_file} ${clash_config}
+        mv ${data_dir}/run/config.yaml ${clash_config}
         log error "configuration failed, please check the ${clash_config}." && exit 1
       fi
       ;;

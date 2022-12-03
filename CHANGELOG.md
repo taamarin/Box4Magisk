@@ -1,5 +1,6 @@
-#### ⟳ Changelog v4.5.5
+#### ⟳ Changelog v4.5.5-nightly
 - fix run `sing-box`
+- adjust scripts upkernel, download Geo, and port detection in logs
 
 #### ⟳ Changelog v4.5.4
 - add tool update kernel `su -c /data/adb/box/scripts/box.tool upcore`

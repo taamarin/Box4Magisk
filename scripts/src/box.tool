@@ -45,9 +45,13 @@ update_file() {
 update_subgeo() {
   case "${bin_name}" in
     clash)
-      geoip_file="${data_dir}/clash/Country.mmdb"
-      geoip_url="https://github.com/Loyalsoldier/geoip/raw/release/Country-only-cn-private.mmdb"
-      # geoip_url="https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat"
+      if [ "${meta}" = "false" ] ; then
+        geoip_file="${data_dir}/clash/Country.mmdb"
+        geoip_url="https://github.com/Loyalsoldier/geoip/raw/release/Country-only-cn-private.mmdb"
+      else
+        geoip_file="${data_dir}/clash/GeoIP.dat"
+        geoip_url="https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat"
+      fi
       geosite_file="${data_dir}/clash/GeoSite.dat"
       geosite_url="https://github.com/CHIZI-0618/v2ray-rules-dat/raw/release/geosite.dat"
     ;;
@@ -88,6 +92,9 @@ port_detection() {
     info)
       [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
       ;;
+    port)
+      [ -t 1 ] && echo -n "\033[1;33m$2 \033[0m" || echo -n "$2 " | tee -a ${logs_file} >> /dev/null 2>&1
+      ;;
     *)
       [ -t 1 ] && echo -n "\033[1;30m${now} [$1]: $2\033[0m" || echo -n "${now} [$1]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
       ;;
@@ -103,7 +110,7 @@ port_detection() {
   logs info "port detected: "
   for sub_port in ${port[*]} ; do
     sleep 0.5
-    echo -n "${sub_port} " >> ${logs_file}
+    logs port "${sub_port}"
   done
   echo "" >> ${logs_file}
 }
@@ -122,13 +129,12 @@ update_kernel() {
     sing-box)
       download_link="https://github.com/taamarin/sing-box/releases"
       github_api="https://api.github.com/repos/taamarin/sing-box/releases"
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9,a-z].[0-9,a-z].[0-9,a-z].[0-9,a-z]*")
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
       download_file="sing-box-${platform}-${arch}-${latest_version}.gz"
       update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/${latest_version}/${download_file}
       ;;
     clash)
       # true for clash.meta, false for clash.premium
-      meta="false"
       if [ "${meta}" = "true" ] ; then
         tag="Prerelease-Alpha"
         tag_name="alpha-[0-9,a-z]+"
@@ -144,7 +150,7 @@ update_kernel() {
     xray)
       download_link="https://github.com/XTLS/Xray-core/releases"
       github_api="https://api.github.com/repos/XTLS/Xray-core/releases"
-      latest_version=$(curl -ks ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
       if [ "${arc}" != "aarch64" ] ; then
         download_file="Xray-linux-arm32-v7a.zip"
       else
@@ -157,7 +163,7 @@ update_kernel() {
     v2fly)
       download_link="https://github.com/v2fly/v2ray-core/releases"
       github_api="https://api.github.com/repos/v2fly/v2ray-core/releases"
-      latest_version=$(curl -ks ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
       if [ "${arc}" != "aarch64" ] ; then
         download_file="v2ray-linux-arm32-v7a.zip"
       else
