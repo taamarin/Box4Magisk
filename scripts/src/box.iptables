@@ -296,7 +296,7 @@ start_tproxy() {
     ${iptables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     ${iptables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     # Route DNS request to Box
-    ${iptables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${id}
+    [ "${bin_name}" != "clash" ] && ${iptables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${id}
     if [ "${ipv6}" = "true" ] ; then
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${id}
@@ -304,7 +304,7 @@ start_tproxy() {
       ${ip6tables} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
       ${ip6tables} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
       # Route DNS request to Box
-      ${ip6tables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${id}
+      [ "${bin_name}" != "clash" ] && ${ip6tables} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${id}
     fi
     log info "proxy mode: ${proxy_mode}, ${packages_list[*]} transparent proxy."
   else

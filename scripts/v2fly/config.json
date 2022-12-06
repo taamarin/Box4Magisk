@@ -1,7 +1,7 @@
 {
   "log": {
     "access": "none",
-    "loglevel": "debug",
+    "loglevel": "warning",
     "dnsLog": true
   },
   "inbounds": [
@@ -31,36 +31,33 @@
   "outbounds": [
     {
       "tag": "proxy",
-      "protocol": "vmess",
+      "protocol": "vless",
       "settings": {
         "vnext": [
           {
-            "address": "172.67.199.34",
-            "port": 80,
+            "address": "103.253.24.168",
+            "port": 443,
             "users": [
               {
+                "id": "xxx-xxx-xxx",
                 "alterId": 0,
-                "encryption": "",
-                "flow": "",
-                "id": "8a03dce3-3c8f-4785-be8d-bc8a832d0884",
-                "level": 8,
-                "security": "auto"
+                "security": "none",
+                "encryption": "none"
               }
             ]
           }
         ]
       },
       "streamSettings": {
-        "network": "ws",
-        "security": "none",
-        "wsSettings": {
-          "headers": {
-            "Host": "dynamic-sg1b.obfs.xyz"
-          },
-          "path": "/worryfree"
-        },
+        "network": "tcp",
+        "security": "tls",
         "tlsSettings": {
-          "allowInsecure": false
+          "allowInsecure": true,
+          "serverName": "teams.microsoft.com"
+        },
+        "tcpSettings": null,
+        "sockopt": {
+          "domainStrategy": "UseIPv4"
         }
       },
       "mux": {
@@ -72,7 +69,7 @@
       "tag": "direct",
       "protocol": "freedom",
       "settings": {
-        "domainStrategy": "UseIP"
+        "domainStrategy": "UseIPv4"
       }
     },
     {
@@ -88,7 +85,7 @@
       "tag": "dns-out",
       "protocol": "dns",
       "settings": {
-        "address": "8.8.8.8"
+        "address": "1.1.1.1"
       }
     }
   ],
@@ -97,10 +94,11 @@
       "geosite:category-ads-all": "127.0.0.1"
     },
     "servers": [
-      "https+local://1.1.1.1/dns-query"
+      "1.1.1.1",
+      "8.8.8.8"
     ],
     "tag": "dns",
-    "queryStrategy": "UseIP"
+    "queryStrategy": "UseIPv4"
   },
   "routing": {
     "domainStrategy": "IPIfNonMatch",

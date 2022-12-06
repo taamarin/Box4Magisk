@@ -87,7 +87,7 @@ update_subgeo() {
 port_detection() {
   logs() {
     export TZ=Asia/Jakarta
-    now=$(date "+%H:%M %Z")
+    now=$(date +"%Y-%m-%d %H:%M %z")
     case $1 in
     info)
       [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
@@ -158,7 +158,11 @@ update_kernel() {
       fi
       update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
       unzip -j -o "${data_dir}/${file_kernel}.zip" "xray" -d ${bin_kernel} >&2
-      restart_box && exit 0
+      if [ -f ${pid_file} ] ; then
+        restart_box && exit 0
+      else
+        exit 0
+      fi
     ;;
     v2fly)
       download_link="https://github.com/v2fly/v2ray-core/releases"
@@ -172,7 +176,11 @@ update_kernel() {
       update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
       unzip -j -o "${data_dir}/${file_kernel}.zip" "v2ray" -d ${bin_kernel} >&2 \
       && mv ${bin_kernel}/v2ray ${bin_kernel}/v2fly || log error "failed replace"
-      restart_box && exit 0
+      if [ -f ${pid_file} ] ; then
+        restart_box && exit 0
+      else
+        exit 0
+      fi
       ;;
     *)
       log error "kernel error." && exit 1
@@ -215,6 +223,7 @@ cgroup_limit() {
 update_dashboard() {
   file_dasboard="${data_dir}/dashboard.zip"
   rm -rf ${data_dir}/dashboard/dist
+  # curl -L -A 'clash' "https://github.com/MetaCubeX/Yacd-meta/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
   curl -L -A 'clash' "https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
   unzip -o  "${file_dasboard}" "yacd-gh-pages/*" -d ${data_dir}/dashboard >&2
   mv -f ${data_dir}/dashboard/yacd-gh-pages ${data_dir}/dashboard/dist 

@@ -15,7 +15,7 @@ ipv6() {
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    ip -6 rule add unreachable pref 100
+    # ip -6 rule add unreachable pref 100
     log info "Ipv6: disable"
   else
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
@@ -23,7 +23,7 @@ ipv6() {
     echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    ip -6 rule del unreachable pref 100
+    # ip -6 rule del unreachable pref 100
     log info "Ipv6: enable"
   fi
 }
@@ -155,7 +155,7 @@ run_box() {
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${data_dir}/xray
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -170,7 +170,7 @@ run_box() {
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${data_dir}/v2fly
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -224,9 +224,9 @@ start_box() {
     log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1
   fi
 
-  chown ${box_user_group} ${bin_path}
+  chown 0:3005 ${bin_path}
   chmod 0700 ${bin_path}
-  chown ${box_user_group} ${data_dir}/${bin_name}/*
+  chown 0:3005 ${data_dir}/${bin_name}/*
   chmod 0700 ${data_dir}/${bin_name}/*
 
   # setcap has been deprecated as it does not support binary outside of the /system/bin directory
