@@ -91,7 +91,7 @@ detected_port() {
 }
 
 temporary_config_file() {
-  sed -i '/^[  ]*$/d' ${data_dir}/template.ini
+  # sed -i '/^[  ]*$/d' ${data_dir}/template.ini
   if [ -f "${data_dir}/template.ini" ] ; then
     if [ -f "${clash_config}" ] ; then
       cp -f ${data_dir}/template.ini ${data_dir}/run/config.yaml.swp && echo "\n" >> ${data_dir}/run/config.yaml.swp
