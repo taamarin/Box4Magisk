@@ -14,8 +14,4 @@ proxy-providers:
       url: http://cp.cloudflare.com/generate_204
       interval: 1200
 rules:
-  - DOMAIN-SUFFIX,googlesyndication.com,llycoris
-  - AND,((DST-PORT,5228-5230),(NETWORK,TCP)),DIRECT
-  - GEOSITE,CATEGORY-ADS-ALL,REJECT
-  - GEOIP,PRIVATE,REJECT
   - MATCH,llycoris

@@ -72,7 +72,7 @@ start_listen() {
     if probe_bin_alive ; then
       log error "${bin_name} service is running but may not listening."
     else
-      log error "listen, ${bin_name} port is not detected."
+      log error "listen, ${bin_name}"
       kill $(cat ${pid_file})
       rm -f ${pid_file} && exit 1
     fi
@@ -155,7 +155,7 @@ run_box() {
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${data_dir}/xray
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -170,7 +170,7 @@ run_box() {
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${data_dir}/v2fly
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1

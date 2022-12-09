@@ -1,7 +1,7 @@
 {
   "log": {
-    "disabled": true,
-    "level": "panic",
+    "disabled": false,
+    "level": "error",
     "output": "../run/sing-box.log",
     "timestamp": false
   },
@@ -27,8 +27,8 @@
         "detour": "direct"
       },
       {
-        "tag": "nxdomain",
-        "address": "RCode://name_error"
+        "tag": "block",
+        "address": "rcode://success"
       }
     ],
     "rules": [
@@ -43,14 +43,7 @@
         "geosite": [
           "category-ads-all"
         ],
-        "server": "nxdomain",
-        "disable_cache": false
-      },
-      {
-        "geosite": [
-          "youtube"
-        ],
-        "server": "googledns",
+        "server": "block",
         "disable_cache": false
       }
     ]
@@ -76,11 +69,11 @@
   "outbounds": [
     {
       "type": "direct",
-      "tag": "direct-out"
+      "tag": "direct"
     },
     {
       "type": "block",
-      "tag": "block-out"
+      "tag": "block"
     },
     {
       "type": "dns",
@@ -95,7 +88,7 @@
       ]
     },
     {
-      "tag": "sub-box - opok tsel",
+      "tag": "opok tsel",
       "type": "vmess",
       "server": "159.223.38.70",
       "server_port": 80,
@@ -104,7 +97,6 @@
       "alter_id": 0,
       "transport": {
         "type": "ws",
-        "max_early_data": 2048,
         "path": "/worryfree",
         "headers": {
           "Host": "dynamic-sg1b.obfs.xyz"
@@ -115,7 +107,7 @@
       "tag": "sub-box",
       "type": "selector",
       "outbounds": [
-        "sub-box - opok tsel"
+        "opok tsel"
       ]
     }
   ],
@@ -123,11 +115,11 @@
     "final": "sing-box",
     "geoip": {
       "download_url": "https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db",
-      "download_detour": "sub-box"
+      "download_detour": "direct"
     },
     "geosite": {
       "download_url": "https://github.com/CHIZI-0618/v2ray-rules-dat/raw/release/geosite.db",
-      "download_detour": "sub-box"
+      "download_detour": "direct"
     },
     "rules": [
       {
@@ -139,7 +131,7 @@
         "port_range": [
           "5228:5230"
         ],
-        "outbound": "direct-out"
+        "outbound": "direct"
       }
     ],
     "find_process": false,
@@ -150,7 +142,6 @@
     "clash_api": {
       "external_controller": "0.0.0.0:9090",
       "external_ui": "../dashboard/dist",
-      "secret": "",
       "store_selected": false
     }
   }
