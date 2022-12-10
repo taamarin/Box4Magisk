@@ -1,3 +1,9 @@
+#### ⟳ Changelog v4.5.6
+- Optimize Box service script
+- update template.ini
+- clash tproxy-port does not accept dns traffic
+- Remove routing table to disable IPv6
+
 #### ⟳ Changelog v4.5.5-nightly
 - fix run `sing-box`
 - adjust scripts upkernel, download Geo, and port detection in logs
