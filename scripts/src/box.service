@@ -8,6 +8,14 @@ source /data/adb/box/settings.ini
   # abort "! Only support Android 8.1+ devices"
 # fi
 
+delete_logs() {
+  for list in ${bin_list[*]} ; do
+    rm -rf ${run_path}/${list}.log
+  done
+  # # Delete the log three days ago
+  # find ${run_path} -mtime +3 -type f -name "*.log" | xargs rm -f
+}
+
 ipv6() {
   if [ "${ipv6}" = "false" ] ; then
     echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
@@ -15,7 +23,6 @@ ipv6() {
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    # ip -6 rule add unreachable pref 100
     log info "Ipv6: disable"
   else
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
@@ -23,36 +30,7 @@ ipv6() {
     echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    # ip -6 rule del unreachable pref 100
     log info "Ipv6: enable"
-  fi
-}
-
-probe_bin_alive() {
-   [ -f ${pid_file} ] && cmd_file="/proc/$(pidof ${bin_name})/cmdline" || return 1
-   [ -f ${cmd_file} ] && grep -q ${bin_name} ${cmd_file} && return 0 || return 1
-}
-
-find_netstat_path() {
-  [ -f /system/bin/netstat ] && alias netstat="/system/bin/netstat" && return 0
-  [ -f /system/xbin/netstat ] && alias netstat="/system/xbin/netstat" && return 0
-  return 1
-}
-
-wait_bin_listen() {
-  wait_count=0
-  bin_pid=$(cat ${pid_file})
-  find_netstat_path && \
-  check_bin_cmd="netstat -tnulp | grep ${bin_name} >> /dev/null" || \
-  check_bin_cmd="ls -lh /proc/${bin_pid}/fd | grep -q socket"
-  while probe_bin_alive && ! eval "${check_bin_cmd}" && [ ${wait_count} -lt 100 ] ; do
-    sleep 0.5
-    wait_count=$((${wait_count} + 1))
-  done
-  if probe_bin_alive && eval "${check_bin_cmd}" ; then
-    return 0
-  else
-    return 1
   fi
 }
 
@@ -64,18 +42,6 @@ crontab_geo() {
     log info "subscription (${auto_updatesubcript})."
   else
     log info "crontab geox & subscription is disable."
-  fi
-}
-
-start_listen() {
-  if ! wait_bin_listen ; then
-    if probe_bin_alive ; then
-      log error "${bin_name} service is running but may not listening."
-    else
-      log error "listen, ${bin_name}"
-      kill $(cat ${pid_file})
-      rm -f ${pid_file} && exit 1
-    fi
   fi
 }
 
@@ -108,21 +74,29 @@ temporary_config_file() {
 }
 
 run_box() {
+  log info "select ${bin_name}"
   log info "starting ${bin_name} service."
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
       # sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
       # if [ "${proxy_mode}" == "core" ] ; then
-        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true,/' ${sing_config}
+        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json
       # else
-        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false,/' ${sing_config}
+        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json
       # fi
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
         sleep 0.5
-        start_listen
+        if ! pidof ${bin_name} ; then
+          log error "${bin_name} layanan tidak berjalan." 
+          log error "please, check ${bin_name}.log"
+          kill $(pidof ${bin_name}) || killall ${bin_name}
+          rm -rf ${pid_file}
+          exit 1
+        fi
+        # start_listen
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
       fi
@@ -155,7 +129,7 @@ run_box() {
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${data_dir}/xray
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -170,7 +144,7 @@ run_box() {
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${data_dir}/v2fly
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
@@ -194,9 +168,12 @@ cgroup_limit() {
 }
 
 display_bin_pid() {
-  if probe_bin_alive ; then
+  if bin_pid=$(pidof ${bin_name}) ; then
     log info "${bin_name} has started with the $(stat -c %U:%G /proc/$(pidof ${bin_name})) user group."
-    log info "${bin_name} service is running. ( PID: $(pidof ${bin_name}) )."
+    log info "${bin_name} memory usage: $(cat /proc/${bin_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
+    log info "${bin_name} cpu usage: $((/system/bin/ps -eo %CPU,NAME | grep ${bin_name} | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep ${bin_name} | awk '{print $1}')"
+    log info "${bin_name} running time: $(ps -o comm,etime | grep ${bin_name} | awk '{print $2}')"
+    log info "${bin_name} service is running. (PID: $(pidof ${bin_name}))."
   else
     log warn "${bin_name} service is stopped."
   fi
@@ -217,7 +194,7 @@ create_tun() {
 start_box() {
   echo -n "" > ${logs_file}
   echo $(date) >> ${logs_file}
-  if probe_bin_alive ; then
+  if bin_pid=$(pidof ${bin_name}) ; then
     log warn "${bin_name} service masih berjalan." && exit 1
   fi
   if [ ! -f ${bin_path} ] ; then
@@ -248,18 +225,15 @@ start_box() {
       log error "kernel ${bin_name} corrupted." && exit 1
     fi
   fi
+  delete_logs
   ipv6
   create_tun
+  log info "cilent list: ${bin_list[*]}"
   run_box
   cgroup_limit
   detected_port
   display_bin_pid
 }
-
-# delete_logs() {
-  # # Delete the log three days ago
-  # find ${run_path} -mtime +3 -type f -name "*.log" | xargs rm -f
-# }
 
 stop_box() {
   cronkill=$(ps -ef | grep root | grep "crond -c /data/adb/box/" | ${busybox_path} awk '{ print $2 }' | sort -u)

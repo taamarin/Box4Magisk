@@ -87,7 +87,7 @@ update_subgeo() {
 port_detection() {
   logs() {
     export TZ=Asia/Jakarta
-    now=$(date +"%Y-%m-%d %H:%M %z")
+    now=$(date +"%I.%M %P %z")
     case $1 in
     info)
       [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
@@ -150,7 +150,7 @@ update_kernel() {
     xray)
       download_link="https://github.com/XTLS/Xray-core/releases"
       github_api="https://api.github.com/repos/XTLS/Xray-core/releases"
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*-[0-9.]*")
       if [ "${arc}" != "aarch64" ] ; then
         download_file="Xray-linux-arm32-v7a.zip"
       else
