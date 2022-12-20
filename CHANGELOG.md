@@ -1,3 +1,8 @@
+#### ⟳ Changelog v4.6
+- optimize bfm service script
+- only support Android 8.1+ devices
+- add core CPU/RES usage display
+
 #### ⟳ Changelog v4.5.6
 - Optimize Box service script
 - update template.ini
