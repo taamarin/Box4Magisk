@@ -242,6 +242,7 @@ stop_box() {
   done
   if (kill $(pidof ${bin_name}) || killall ${bin_name}) ; then
     rm -rf ${pid_file}
+    sleep 0.5
     display_bin_pid
   fi
 }

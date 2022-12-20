@@ -12,6 +12,10 @@ if [ $BOOTMODE ! = true ] ; then
 	abort "- ! Aborting installation !"
 fi
 
+if [ "$API" -lt 27 ]; then
+  abort "! Only support Android 8.1+ devices"
+fi
+
 ui_print "- Installing Box for Magisk"
 
 if [ -d "/data/adb/box" ] ; then
