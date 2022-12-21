@@ -87,7 +87,7 @@ update_subgeo() {
 port_detection() {
   logs() {
     export TZ=Asia/Jakarta
-    now=$(date +"%I.%M %P %z")
+    now=$(date +"%I.%M %P")
     case $1 in
     info)
       [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1

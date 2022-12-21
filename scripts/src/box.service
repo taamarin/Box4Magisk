@@ -4,10 +4,6 @@ scripts=$(realpath $0)
 scripts_dir=$(dirname ${scripts})
 source /data/adb/box/settings.ini
 
-# if [ "$API" -lt 27 ]; then
-  # abort "! Only support Android 8.1+ devices"
-# fi
-
 delete_logs() {
   for list in ${bin_list[*]} ; do
     rm -rf ${run_path}/${list}.log
@@ -64,27 +60,31 @@ temporary_config_file() {
       sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${data_dir}/run/config.yaml.swp
       sed -i '/^[  ]*$/d' ${data_dir}/run/config.yaml.swp
     else
-      log error "${clash_config} file is missing!!!." && exit 1
+      log error "${clash_config} file is missing!!!."
+      exit 1
     fi
   else
-    log error "${data_dir}/template.ini file is missing !!!." && exit 1
+    log error "${data_dir}/template.ini file is missing !!!."
+    exit 1
   fi
   mv ${data_dir}/run/config.yaml.swp ${data_dir}/run/config.yaml \
   && log info "merge config clash succes." || (log error "merge config failed!!!." && exit 1)
 }
 
 run_box() {
+  log info "client list: ${bin_list[*]}"
   log info "select ${bin_name}"
   log info "starting ${bin_name} service."
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      # sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
       # if [ "${proxy_mode}" == "core" ] ; then
         # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json
       # else
         # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json
       # fi
+      chown 0:3005 ${data_dir}/sing-box/config.json
+      chmod 0700 ${data_dir}/sing-box/config.json
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
@@ -96,12 +96,14 @@ run_box() {
           rm -rf ${pid_file}
           exit 1
         fi
-        # start_listen
       else
-        log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
+        log error "configuration failed, please check the ${run_path}/error.log file."
+        exit 1
       fi
       ;;
     clash)
+      chown 0:3005 ${data_dir}/clash/config.yaml
+      chmod 0700 ${data_dir}/clash/config.yaml
       if [ "${clash_tun_status}" = "true" ] ; then
         sed -i 's/network_mode=.*/network_mode="MIXED"/' ${settings}
         sed -i 's/auto-route:.*/auto-route: true/' ${data_dir}/template.ini
@@ -117,7 +119,8 @@ run_box() {
         echo -n $! > ${pid_file}
       else
         mv ${data_dir}/run/config.yaml ${clash_config}
-        log error "configuration failed, please check the ${clash_config}." && exit 1
+        log error "configuration failed, please check the ${clash_config}."
+        exit 1
       fi
       ;;
     xray)
@@ -128,15 +131,20 @@ run_box() {
       fi
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${data_dir}/xray
+      chown 0:3005 ${data_dir}/xray/*.json
+      chmod 0700 ${data_dir}/xray/*.json
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
-        log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
+        log error "configuration failed, please check the ${run_path}/error.log file." 
+        exit 1
       fi
     ;;
     v2fly)
       sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
+      chown 0:3005 ${data_dir}/v2fly/*.json
+      chmod 0700 ${data_dir}/v2fly/*.json
       if [ ! -f ${data_dir}/v2fly/*.json ] ; then
         log error "file ${data_dir}/*.json no found"
         exit 0
@@ -147,11 +155,13 @@ run_box() {
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
-        log error "configuration failed, please check the ${run_path}/error.log file." && exit 1
+        log error "configuration failed, please check the ${run_path}/error.log file." 
+        exit 1
       fi
       ;;
     *)
-      log error "kernel error." && exit 1
+      log error "kernel error."
+      exit 1
       ;;
   esac
   rm -rf ${run_path}/error.log
@@ -167,12 +177,22 @@ cgroup_limit() {
   fi
 }
 
+bin_usage() {
+  bin_alive=$(grep VmRSS /proc/$(pidof ${bin_name})/status | awk -F':' '{print $2}' | awk '{print $1}')
+  if [ ${bin_alive} -ge 1024 ] ; then
+    bin_res="$(expr ${bin_alive} / 1024)Mb"
+  else
+    bin_res="${bin_alive}Kb"
+  fi
+  log info "${bin_name} memory usage: ${bin_res}"
+  log info "${bin_name} cpu usage: $((ps -p $(pidof ${bin_name}) -o pcpu | grep -v %CPU | awk '{print $1}') 2> /dev/null )%"
+  log info "${bin_name} running time: $(ps -p $(pidof sing-box) -o comm,etime | grep ${bin_name} | awk '{print $2}')"
+}
+
 display_bin_pid() {
   if bin_pid=$(pidof ${bin_name}) ; then
     log info "${bin_name} has started with the $(stat -c %U:%G /proc/$(pidof ${bin_name})) user group."
-    log info "${bin_name} memory usage: $(cat /proc/${bin_pid}/status | grep -w VmRSS | awk '{print $2$3}')"
-    log info "${bin_name} cpu usage: $((/system/bin/ps -eo %CPU,NAME | grep ${bin_name} | awk '{print $1"%"}') 2> /dev/null || dumpsys cpuinfo | grep ${bin_name} | awk '{print $1}')"
-    log info "${bin_name} running time: $(ps -o comm,etime | grep ${bin_name} | awk '{print $2}')"
+    bin_usage
     log info "${bin_name} service is running. (PID: $(pidof ${bin_name}))."
   else
     log warn "${bin_name} service is stopped."
@@ -195,23 +215,19 @@ start_box() {
   echo -n "" > ${logs_file}
   echo $(date) >> ${logs_file}
   if bin_pid=$(pidof ${bin_name}) ; then
-    log warn "${bin_name} service masih berjalan." && exit 1
+    log warn "${bin_name} service masih berjalan."
+    exit 1
   fi
   if [ ! -f ${bin_path} ] ; then
-    log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1
+    log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory."
+    exit 1
   fi
-
   chown 0:3005 ${bin_path}
   chmod 0700 ${bin_path}
-  chown 0:3005 ${data_dir}/${bin_name}/*
-  chmod 0700 ${data_dir}/${bin_name}/*
-
-  # setcap has been deprecated as it does not support binary outside of the /system/bin directory
-  #  setcap 'cap_net_admin,cap_net_raw+ep' ${bin_path}
-
   if [ "${bin_name}" = "clash" ] ; then
     if ! (${bin_path} -v >> ${logs_file}) ; then
-      log error "kernel ${bin_name} corrupted." && exit 1
+      log error "kernel ${bin_name} corrupted."
+      exit 1
     fi
     if [ "${update_interval}" != "false" ] ; then
       nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
@@ -222,13 +238,13 @@ start_box() {
     fi
   else
     if ! (${bin_path} version >> ${logs_file}) ; then
-      log error "kernel ${bin_name} corrupted." && exit 1
+      log error "kernel ${bin_name} corrupted."
+      exit 1
     fi
   fi
   delete_logs
   ipv6
   create_tun
-  log info "cilent list: ${bin_list[*]}"
   run_box
   cgroup_limit
   detected_port
@@ -255,7 +271,10 @@ case "$1" in
   stop)
     time stop_box
     ;;
+  usage)
+    bin_usage
+    ;;
   *)
-    echo "$0:  usage:  $0 {start|stop}"
+    echo "$0:  usage: $0 {start|stop}"
     ;;
 esac
