@@ -1,3 +1,6 @@
+#### ⟳ Changelog v4.6.1
+- adjust: core CPU/RES usage display
+
 #### ⟳ Changelog v4.6
 - optimize bfm service script
 - only support Android 8.1+ devices
