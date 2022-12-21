@@ -7,6 +7,7 @@ source /data/adb/box/settings.ini
 delete_logs() {
   for list in ${bin_list[*]} ; do
     rm -rf ${run_path}/${list}.log
+    rm -rf ${run_path}/config.yaml
   done
   # # Delete the log three days ago
   # find ${run_path} -mtime +3 -type f -name "*.log" | xargs rm -f
@@ -71,6 +72,16 @@ temporary_config_file() {
   && log info "merge config clash succes." || (log error "merge config failed!!!." && exit 1)
 }
 
+still_alive() {       
+  if ! pidof ${bin_name} ; then
+    log error "${bin_name} layanan tidak berjalan." 
+    log error "please, check ${bin_name}.log"
+    kill $(pidof ${bin_name}) || killall ${bin_name}
+    rm -rf ${pid_file}
+    exit 1
+  fi
+}
+
 run_box() {
   log info "client list: ${bin_list[*]}"
   log info "select ${bin_name}"
@@ -88,14 +99,6 @@ run_box() {
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
-        sleep 0.5
-        if ! pidof ${bin_name} ; then
-          log error "${bin_name} layanan tidak berjalan." 
-          log error "please, check ${bin_name}.log"
-          kill $(pidof ${bin_name}) || killall ${bin_name}
-          rm -rf ${pid_file}
-          exit 1
-        fi
       else
         log error "configuration failed, please check the ${run_path}/error.log file."
         exit 1
@@ -115,7 +118,7 @@ run_box() {
       fi
       temporary_config_file
       if ${bin_path} -t -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         mv ${data_dir}/run/config.yaml ${clash_config}
@@ -178,15 +181,15 @@ cgroup_limit() {
 }
 
 bin_usage() {
-  bin_alive=$(grep VmRSS /proc/$(pidof ${bin_name})/status | awk -F':' '{print $2}' | awk '{print $1}')
+  bin_alive=$(grep VmRSS /proc/$(pidof ${bin_name})/status | ${busybox_path} awk -F':' '{print $2}' | ${busybox_path} awk '{print $1}')
   if [ ${bin_alive} -ge 1024 ] ; then
     bin_res="$(expr ${bin_alive} / 1024)Mb"
   else
     bin_res="${bin_alive}Kb"
   fi
   log info "${bin_name} memory usage: ${bin_res}"
-  log info "${bin_name} cpu usage: $((ps -p $(pidof ${bin_name}) -o pcpu | grep -v %CPU | awk '{print $1}') 2> /dev/null )%"
-  log info "${bin_name} running time: $(ps -p $(pidof sing-box) -o comm,etime | grep ${bin_name} | awk '{print $2}')"
+  log info "${bin_name} cpu usage: $((ps -p $(pidof ${bin_name}) -o pcpu | grep -v %CPU | ${busybox_path} awk '{print $1}') 2> /dev/null )%"
+  log info "${bin_name} running time: $(ps -p $(pidof ${bin_name}) -o comm,etime | grep ${bin_name} | ${busybox_path} awk '{print $2}')"
 }
 
 display_bin_pid() {
@@ -247,7 +250,9 @@ start_box() {
   create_tun
   run_box
   cgroup_limit
+  sleep 0.5
   detected_port
+  still_alive
   display_bin_pid
 }
 
