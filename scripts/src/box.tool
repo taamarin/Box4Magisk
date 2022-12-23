@@ -27,18 +27,16 @@ update_file() {
   file="$1"
   file_bak="${file}.bak"
   update_url="$2"
-  if [ -f ${file} ] ; then
-    mv -f ${file} ${file_bak}
-  fi
+  [ -f ${file} ] \
+  && mv -f ${file} ${file_bak}
   echo "curl -k --insecure -L -A '${bin_name}' ${update_url} -o ${file}"
   curl -k --insecure -L -A '${bin_name}' ${update_url} -o ${file} 2>&1
   sleep 0.5
   if [ -f "${file}" ] ; then
     echo ""
   else
-    if [ -f "${file_bak}" ] ; then
-    mv ${file_bak} ${file}
-    fi
+    [ -f "${file_bak}" ] \
+    && mv ${file_bak} ${file}
   fi
 }
 
@@ -71,6 +69,7 @@ update_subgeo() {
 
   if [ "${auto_updategeox}" = "true" ] ; then
     if update_file ${geoip_file} ${geoip_url} && update_file ${geosite_file} ${geosite_url} ; then
+      log warn "Update geo $(date +"%Y-%m-%d %I.%M %p")"
       flag=false
     fi
   fi
@@ -87,10 +86,10 @@ update_subgeo() {
 port_detection() {
   logs() {
     export TZ=Asia/Jakarta
-    now=$(date +"%I.%M %P")
+    now=$(date +"%I.%M %p")
     case $1 in
     info)
-      [ -t 1 ] && echo -n "\033[1;33m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
+      [ -t 1 ] && echo -n "\033[1;34m${now} [info]: $2\033[0m" || echo -n "${now} [info]: $2" | tee -a ${logs_file} >> /dev/null 2>&1
       ;;
     port)
       [ -t 1 ] && echo -n "\033[1;33m$2 \033[0m" || echo -n "$2 " | tee -a ${logs_file} >> /dev/null 2>&1
@@ -107,7 +106,7 @@ port_detection() {
     log info "skip!!! port detected"
     exit 0
   fi
-  logs info "port detected: "
+  logs info "${bin_name} port detected: "
   for sub_port in ${port[*]} ; do
     sleep 0.5
     logs port "${sub_port}"
@@ -127,14 +126,24 @@ update_kernel() {
   file_kernel="${bin_name}-${arch}"
   case "${bin_name}" in
     sing-box)
-      download_link="https://github.com/taamarin/sing-box/releases"
-      github_api="https://api.github.com/repos/taamarin/sing-box/releases"
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
-      download_file="sing-box-${platform}-${arch}-${latest_version}.gz"
-      update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/${latest_version}/${download_file}
+      download_link="https://github.com/SagerNet/sing-box/releases"
+      github_api="https://api.github.com/repos/SagerNet/sing-box/releases"
+      latest_version_tag=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "[0-9.]*")
+      download_file="sing-box-${latest_version}-${platform}-${arch}"
+      update_file ${data_dir}/${file_kernel}.tar.gz ${download_link}/download/${latest_version_tag}/${download_file}.tar.gz 
+      # extra tar.gz
+      tar -xvf ${data_dir}/${file_kernel}.tar.gz -C ${data_dir} >&2
+      mv -f ${data_dir}/${download_file}/sing-box ${bin_kernel}/sing-box \
+      && rm -rf ${data_dir}/${download_file}
+      # end
+      if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
+        restart_box && exit 0
+      else
+        exit 0
+      fi
       ;;
     clash)
-      # true for clash.meta, false for clash.premium
       if [ "${meta}" = "true" ] ; then
         tag="Prerelease-Alpha"
         tag_name="alpha-[0-9,a-z]+"
@@ -150,7 +159,7 @@ update_kernel() {
     xray)
       download_link="https://github.com/XTLS/Xray-core/releases"
       github_api="https://api.github.com/repos/XTLS/Xray-core/releases"
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*-[0-9.]*")
+      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
       if [ "${arc}" != "aarch64" ] ; then
         download_file="Xray-linux-arm32-v7a.zip"
       else
@@ -158,7 +167,7 @@ update_kernel() {
       fi
       update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
       unzip -j -o "${data_dir}/${file_kernel}.zip" "xray" -d ${bin_kernel} >&2
-      if [ -f ${pid_file} ] ; then
+      if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
       else
         exit 0
@@ -176,7 +185,7 @@ update_kernel() {
       update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
       unzip -j -o "${data_dir}/${file_kernel}.zip" "v2ray" -d ${bin_kernel} >&2 \
       && mv ${bin_kernel}/v2ray ${bin_kernel}/v2fly || log error "failed replace"
-      if [ -f ${pid_file} ] ; then
+      if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
       else
         exit 0
@@ -206,12 +215,9 @@ update_kernel() {
 }
 
 cgroup_limit() {
-  if [ "${cgroup_memory_limit}" = "" ] ; then
-    return
-  fi
-  if [ "${cgroup_memory_path}" = "" ] ; then
-    cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
-  fi
+  [ "${cgroup_memory_limit}" = "" ] && return
+  [ "${cgroup_memory_path}" = "" ] \
+  && cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
 
   mkdir -p "${cgroup_memory_path}/${bin_name}"
   echo $(cat ${pid_file}) > "${cgroup_memory_path}/${bin_name}/cgroup.procs" \
@@ -223,11 +229,27 @@ cgroup_limit() {
 update_dashboard() {
   file_dasboard="${data_dir}/dashboard.zip"
   rm -rf ${data_dir}/dashboard/dist
-  # curl -L -A 'clash' "https://github.com/MetaCubeX/Yacd-meta/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
   curl -L -A 'clash' "https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
   unzip -o  "${file_dasboard}" "yacd-gh-pages/*" -d ${data_dir}/dashboard >&2
-  mv -f ${data_dir}/dashboard/yacd-gh-pages ${data_dir}/dashboard/dist 
+  mv -f ${data_dir}/dashboard/yacd-gh-pages ${data_dir}/dashboard/dist
   rm -rf ${file_dasboard}
+}
+
+dnstt() {
+  if [ -f "${bin_kernel}/dnstt" ] ; then
+    chmod 0700 ${bin_kernel}/dnstt && chown 0:3005 ${bin_kernel}/dnstt
+    if [ ${ns} != "" ] && [ ${key} != "" ] ; then
+      nohup ${busybox_path} setuidgid 0:3005 ${bin_kernel}/dnstt -udp ${dns_for_dnstt}:53 -pubkey ${key} ${ns} 127.0.0.1:9553 > /dev/null 2>&1 &
+      echo -n $! > ${data_dir}/run/dnstt.pid
+      sleep 0.1
+      [ $(pidof dnstt) ] \
+      && log info "dnstt is enable." || log error "v2ray-dns The configuration is incorrect, the startup fails, and the following is the error"
+    else
+      log warn "v2ray-dns tidak aktif, (ns & (key) kosong" 
+    fi
+  else
+    log error "kernel dnstt no found" 
+  fi
 }
 
 case "$1" in
@@ -247,10 +269,13 @@ case "$1" in
   upyacd)
     update_dashboard
     ;;
+  v2raydns)
+    dnstt
+    ;;
   res)
     res
     ;;
   *)
-    echo "$0:  usage:  $0 {upyacd|upcore|cgroup|port|subgeo}"
+    echo "$0:  usage:  $0 {upyacd|v2raydns|upcore|cgroup|port|subgeo}"
     ;;
 esac

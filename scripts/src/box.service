@@ -7,9 +7,11 @@ source /data/adb/box/settings.ini
 delete_logs() {
   for list in ${bin_list[*]} ; do
     rm -rf ${run_path}/${list}.log
-    rm -rf ${run_path}/config.yaml
   done
-  # # Delete the log three days ago
+  find ${run_path} -type f -name "root" | xargs rm -f
+  find ${run_path} -type f -name "*.yaml" | xargs rm -f
+  find ${run_path} -type f -name "*.list" | xargs rm -f
+  # Delete the log three days ago
   # find ${run_path} -mtime +3 -type f -name "*.log" | xargs rm -f
 }
 
@@ -20,59 +22,53 @@ ipv6() {
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    log info "Ipv6: disable"
+    log info "Ipv6: ☒ disable"
   else
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
     echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    log info "Ipv6: enable"
+    log info "Ipv6: ☑ enable"
   fi
 }
 
 crontab_geo() {
   if [ ! "${update_interval}" = "false" ] ; then
-    echo "${update_interval} ${scripts_dir}/box.tool subgeo." >> ${run_path}/root \
-    && log info "crontab geo and subscription (${update_interval})."
-    log info "geox (${auto_updategeox})."
-    log info "subscription (${auto_updatesubcript})."
+    echo "${update_interval} ${scripts_dir}/box.tool subgeo" >> ${run_path}/root
+    log info "interval crontab geo and subscription (${update_interval})."
+    log info "geox ☐ (${auto_updategeox})."
+    log info "subscription ☐ (${auto_updatesubcript})."
   else
-    log info "crontab geox & subscription is disable."
+    log info "crontab geox & subscription is ☒ disable."
   fi
 }
 
 detected_port() {
-  if [ "${port_detect}" = "true" ] ; then
-    sleep 1
-    if ! (${scripts_dir}/box.tool port) ; then
-      return 0
-    fi
-  else
-    log info "skip!!!! port detected."
-  fi
+  sleep 1.5 && [ "${port_detect}" = "true" ] \
+  && (${scripts_dir}/box.tool port) || log info "${bin_name} ☒ skip!!!! port detected."
 }
 
 temporary_config_file() {
   # sed -i '/^[  ]*$/d' ${data_dir}/template.ini
   if [ -f "${data_dir}/template.ini" ] ; then
     if [ -f "${clash_config}" ] ; then
-      cp -f ${data_dir}/template.ini ${data_dir}/run/config.yaml.swp && echo "\n" >> ${data_dir}/run/config.yaml.swp
-      sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${data_dir}/run/config.yaml.swp
-      sed -i '/^[  ]*$/d' ${data_dir}/run/config.yaml.swp
+      cp -f ${data_dir}/template.ini ${data_dir}/run/config.yaml.temp && echo "\n" >> ${data_dir}/run/config.yaml.temp
+      sed -n -E '/^proxies:$/,$p' ${clash_config} >> ${data_dir}/run/config.yaml.temp
+      sed -i '/^[  ]*$/d' ${data_dir}/run/config.yaml.temp
     else
-      log error "${clash_config} file is missing!!!."
+      log error "${clash_config} file is missing !!!."
       exit 1
     fi
   else
     log error "${data_dir}/template.ini file is missing !!!."
     exit 1
   fi
-  mv ${data_dir}/run/config.yaml.swp ${data_dir}/run/config.yaml \
+  mv ${data_dir}/run/config.yaml.temp ${data_dir}/run/config.yaml \
   && log info "merge config clash succes." || (log error "merge config failed!!!." && exit 1)
 }
 
-still_alive() {       
+still_alive() {
   if ! pidof ${bin_name} ; then
     log error "${bin_name} layanan tidak berjalan." 
     log error "please, check ${bin_name}.log"
@@ -82,22 +78,26 @@ still_alive() {
   fi
 }
 
+bin_platfrom() {
+  platfrom=$(${bin_kernel}/clash -v | grep "with" | awk '{print $4}')
+  meta=$(${bin_kernel}/clash -v | grep "with" | awk '{print $2}')
+  [ "${platfrom}" != "android" ] && [ "${meta}" != "Meta" ] && return 0 || return 1
+}
+
 run_box() {
-  log info "client list: ${bin_list[*]}"
-  log info "select ${bin_name}"
+  # ☐ ☒ ☑
+  log info "client list: ☐ ${bin_list[*]}"
+  log info "select: ☑ ${bin_name}"
   log info "starting ${bin_name} service."
+  [ "${network_mode}" = "tproxy" ] \
+  && log info "tproxy_port: (${tproxy_port}) pastikan port ⟳sinkron dgn config client"
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      # if [ "${proxy_mode}" == "core" ] ; then
-        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json
-      # else
-        # sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json
-      # fi
-      chown 0:3005 ${data_dir}/sing-box/config.json
-      chmod 0700 ${data_dir}/sing-box/config.json
+      [ "${proxy_mode}" = "core" ] \
+      && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file."
@@ -105,20 +105,28 @@ run_box() {
       fi
       ;;
     clash)
-      chown 0:3005 ${data_dir}/clash/config.yaml
-      chmod 0700 ${data_dir}/clash/config.yaml
       if [ "${clash_tun_status}" = "true" ] ; then
-        sed -i 's/network_mode=.*/network_mode="MIXED"/' ${settings}
-        sed -i 's/auto-route:.*/auto-route: true/' ${data_dir}/template.ini
-        sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' ${data_dir}/template.ini
+        sed -i 's/tproxy-port:.*/tproxy-port: 0/' ${data_dir}/template.ini
+        if bin_platfrom ; then
+          sed -i 's/network_mode=.*/network_mode="mixed"/' ${settings}
+          sed -i 's/auto-route:.*/auto-route: true/' ${data_dir}/template.ini
+          sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' ${data_dir}/template.ini
+        else
+          sed -i 's/network_mode=.*/network_mode="tun"/' ${settings}
+          sed -i 's/proxy_mode=.*/proxy_mode="blacklist"/' ${settings}
+          sed -i 's/stack:.*/stack: gvisor/' ${data_dir}/template.ini
+          sed -i 's/auto-route:.*/auto-route: false/' ${data_dir}/template.ini
+          sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' ${data_dir}/template.ini
+        fi
       else
-        sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
+        sed -i "s/tproxy-port:.*/tproxy-port: ${tproxy_port}/" ${data_dir}/template.ini
+        sed -i 's/network_mode=.*/network_mode="tproxy"/' ${settings}
         sed -i 's/auto-route:.*/auto-route: false/' ${data_dir}/template.ini
         sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' ${data_dir}/template.ini
       fi
       temporary_config_file
       if ${bin_path} -t -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         mv ${data_dir}/run/config.yaml ${clash_config}
@@ -127,17 +135,15 @@ run_box() {
       fi
       ;;
     xray)
-      sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
+      sed -i 's/network_mode=.*/network_mode="tproxy"/' ${settings}
       if [ ! -f ${data_dir}/xray/*.json ] ; then
         log error "file ${data_dir}/xray/*.json no found"
-        exit 0
+        exit 1
       fi
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${data_dir}/xray
-      chown 0:3005 ${data_dir}/xray/*.json
-      chmod 0700 ${data_dir}/xray/*.json
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." 
@@ -145,17 +151,15 @@ run_box() {
       fi
     ;;
     v2fly)
-      sed -i 's/network_mode=.*/network_mode="TPROXY"/' ${settings}
-      chown 0:3005 ${data_dir}/v2fly/*.json
-      chmod 0700 ${data_dir}/v2fly/*.json
+      sed -i 's/network_mode=.*/network_mode="tproxy"/' ${settings}
       if [ ! -f ${data_dir}/v2fly/*.json ] ; then
-        log error "file ${data_dir}/*.json no found"
-        exit 0
-      fi  
+        log error "file ${data_dir}/v2fly/*.json no found"
+        exit 1
+      fi
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${data_dir}/v2fly
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid ${box_user_group} ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." 
@@ -171,23 +175,20 @@ run_box() {
 }
 
 cgroup_limit() {
-  if [ "${cgroup_memory}" = "true" ] ; then
-    if ! (${scripts_dir}/box.tool cgroup) ; then
-      return 0
-    else
-      log info "cgroup limit: ${cgroup_memory_limit}."
-    fi
-  fi
+  [ "${cgroup_memory}" = "true" ] \
+  && (${scripts_dir}/box.tool cgroup && log info "cgroup limit: ${cgroup_memory_limit}.") || log info "${bin_name} cgroup: ☒ disable"
 }
 
 bin_usage() {
-  bin_alive=$(grep VmRSS /proc/$(pidof ${bin_name})/status | ${busybox_path} awk -F':' '{print $2}' | ${busybox_path} awk '{print $1}')
-  if [ ${bin_alive} -ge 1024 ] ; then
-    bin_res="$(expr ${bin_alive} / 1024)Mb"
-  else
-    bin_res="${bin_alive}Kb"
-  fi
-  log info "${bin_name} memory usage: ${bin_res}"
+  rss=$(grep VmRSS /proc/$(pidof ${bin_name})/status | ${busybox_path} awk -F':' '{print $2}' | ${busybox_path} awk '{print $1}')
+  [ ${rss} -ge 1024 ] \
+  && bin_rss="$(expr ${rss} / 1024)Mb" || bin_rss="${rss}Kb"
+
+  swap=$(grep VmSwap /proc/$(pidof ${bin_name})/status | ${busybox_path} awk -F':' '{print $2}' | ${busybox_path} awk '{print $1}')
+  [ ${swap} -ge 1024 ] \
+  && bin_swap="$(expr ${swap} / 1024)Mb" || bin_swap="${swap}Kb"
+
+  log info "${bin_name} memory usage: ${bin_rss}, swap: ${bin_swap}"
   log info "${bin_name} cpu usage: $((ps -p $(pidof ${bin_name}) -o pcpu | grep -v %CPU | ${busybox_path} awk '{print $1}') 2> /dev/null )%"
   log info "${bin_name} running time: $(ps -p $(pidof ${bin_name}) -o comm,etime | grep ${bin_name} | ${busybox_path} awk '{print $2}')"
 }
@@ -214,30 +215,13 @@ create_tun() {
   [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
 }
 
-start_box() {
-  echo -n "" > ${logs_file}
-  echo $(date) >> ${logs_file}
-  if bin_pid=$(pidof ${bin_name}) ; then
-    log warn "${bin_name} service masih berjalan."
-    exit 1
-  fi
-  if [ ! -f ${bin_path} ] ; then
-    log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory."
-    exit 1
-  fi
-  chown 0:3005 ${bin_path}
-  chmod 0700 ${bin_path}
+check_in_bin() {
+  chown 0:3005 ${bin_path} && chmod 0700 ${bin_path}
+  chown 0:3005 ${data_dir}/${bin_name}/* && chmod 0700 ${data_dir}/${bin_name}/*
   if [ "${bin_name}" = "clash" ] ; then
     if ! (${bin_path} -v >> ${logs_file}) ; then
       log error "kernel ${bin_name} corrupted."
       exit 1
-    fi
-    if [ "${update_interval}" != "false" ] ; then
-      nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
-      ${busybox_path} crontab -c ${run_path} -r
-      touch ${run_path}/root && chmod 0600 ${run_path}/root
-      log info "konfigurasi ${clash_config}."
-      crontab_geo
     fi
   else
     if ! (${bin_path} version >> ${logs_file}) ; then
@@ -245,12 +229,31 @@ start_box() {
       exit 1
     fi
   fi
+}
+
+crontab_alive() {
+  nohup ${busybox_path} crond -c ${run_path} > /dev/null 2>&1 &
+  ${busybox_path} crontab -c ${run_path} -r
+  touch ${run_path}/root && chmod 0600 ${run_path}/root
+  [ "${bin_name}" = "clash" ] && log info "konfigurasi ${clash_config}."
+  crontab_geo
+}
+
+start_box() {
+  echo -n "" > ${logs_file}
+  echo $(date) >> ${logs_file}
+  if bin_pid=$(pidof ${bin_name}) ; then
+    log warn "${bin_name} service masih berjalan."
+    exit 1
+  fi
+  [ ! -f ${bin_path} ] \
+  && log info "kernel ${bin_name} is missing, please download and place it in the ${bin_path} directory." && exit 1 || check_in_bin
   delete_logs
   ipv6
   create_tun
   run_box
+  [ "${update_interval}" != "false" ] && crontab_alive || log info "crontab: ☒ disable"
   cgroup_limit
-  sleep 0.5
   detected_port
   still_alive
   display_bin_pid
@@ -261,10 +264,17 @@ stop_box() {
   for cron in ${cronkill[*]}; do
      kill ${cron}
   done
-  if (kill $(pidof ${bin_name}) || killall ${bin_name}) ; then
+  for list in ${bin_list[*]} ; do
+    kill $(pidof ${list}) || killall ${list}
+  done
+  sleep 0.5
+  if ! [ $(pidof ${bin_name}) ] ; then
     rm -rf ${pid_file}
-    sleep 0.5
+    sleep 0.5 && rm -rf ${run_path}/dnstt.pid
     display_bin_pid
+    log warn "${bin_name} terputus."
+  else
+    log error "failed to stop ${bin_name}"
   fi
 }
 
@@ -275,6 +285,12 @@ case "$1" in
     ;;
   stop)
     time stop_box
+    ;;
+  restart)
+    time stop_box
+    log info "wait 1 sec" && sleep 1
+    time start_box
+    log info "next, renew iptables"
     ;;
   usage)
     bin_usage
