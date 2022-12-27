@@ -81,7 +81,7 @@ still_alive() {
 bin_platfrom() {
   platfrom=$(${bin_kernel}/clash -v | grep "with" | awk '{print $4}')
   meta=$(${bin_kernel}/clash -v | grep "with" | awk '{print $2}')
-  [ "${platfrom}" != "android" ] && [ "${meta}" != "Meta" ] && return 0 || return 1
+  [ "${platfrom}" = "android" ] && [ "${meta}" = "Meta" ] && return 0 || return 1
 }
 
 run_box() {
@@ -94,8 +94,8 @@ run_box() {
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      [ "${proxy_mode}" = "core" ] \
-      && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
+      # [ "${proxy_mode}" = "core" ] \
+      # && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}

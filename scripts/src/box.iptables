@@ -515,8 +515,6 @@ if [ "${proxy_mode}" != "core" ] ; then
     enable)
       [ "${run_dnstt}" != "false" ] && [ "${bin_name}" = "clash" ]  \
       && ${scripts_dir}/box.tool v2raydns
-      intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-      intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
@@ -543,8 +541,6 @@ if [ "${proxy_mode}" != "core" ] ; then
       log info "${bin_name} terhubung."
       ;;
     renew)
-      intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-      intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
       log warn "cleaning up iptables transparent proxy rules."
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
@@ -575,8 +571,6 @@ if [ "${proxy_mode}" != "core" ] ; then
       log info "${bin_name} terhubung."
       ;;
     disable)
-      intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-      intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
       log warn "cleaning up iptables transparent proxy rules."
       time stop_tproxy
       time stop_redirect
