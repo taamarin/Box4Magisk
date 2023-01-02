@@ -50,7 +50,6 @@ detected_port() {
 }
 
 temporary_config_file() {
-  # sed -i '/^[  ]*$/d' ${data_dir}/template.ini
   if [ -f "${data_dir}/template.ini" ] ; then
     if [ -f "${clash_config}" ] ; then
       cp -f ${data_dir}/template.ini ${data_dir}/run/config.yaml.temp && echo "\n" >> ${data_dir}/run/config.yaml.temp
@@ -78,12 +77,6 @@ still_alive() {
   fi
 }
 
-bin_platfrom() {
-  platfrom=$(${bin_kernel}/clash -v | grep "with" | awk '{print $4}')
-  meta=$(${bin_kernel}/clash -v | grep "with" | awk '{print $2}')
-  [ "${platfrom}" = "android" ] && [ "${meta}" = "Meta" ] && return 0 || return 1
-}
-
 run_box() {
   # ☐ ☒ ☑
   log info "client list: ☐ ${bin_list[*]}"
@@ -94,8 +87,8 @@ run_box() {
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      # [ "${proxy_mode}" = "core" ] \
-      # && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
+      [ "${proxy_mode}" = "core" ] \
+      && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
         nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
         echo -n $! > ${pid_file}
@@ -107,7 +100,7 @@ run_box() {
     clash)
       if [ "${clash_tun_status}" = "true" ] ; then
         sed -i 's/tproxy-port:.*/tproxy-port: 0/' ${data_dir}/template.ini
-        if bin_platfrom ; then
+        if [ "${tun_scripts}" != "true" ] ; then
           sed -i 's/network_mode=.*/network_mode="mixed"/' ${settings}
           sed -i 's/auto-route:.*/auto-route: true/' ${data_dir}/template.ini
           sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' ${data_dir}/template.ini
@@ -167,7 +160,7 @@ run_box() {
       fi
       ;;
     *)
-      log error "kernel error."
+      log error "kernel error, ${bin_name} write is wrong."
       exit 1
       ;;
   esac
@@ -239,7 +232,7 @@ crontab_alive() {
   crontab_geo
 }
 
-start_box() {
+start_box() {  
   echo -n "" > ${logs_file}
   echo $(date) >> ${logs_file}
   if bin_pid=$(pidof ${bin_name}) ; then
@@ -252,7 +245,7 @@ start_box() {
   ipv6
   create_tun
   run_box
-  [ "${update_interval}" != "false" ] && crontab_alive || log info "crontab: ☒ disable"
+  [ "${update_interval}" != "false" ] && crontab_alive || log info "crontab: ☒ disable."
   cgroup_limit
   detected_port
   still_alive
@@ -261,7 +254,7 @@ start_box() {
 
 stop_box() {
   cronkill=$(ps -ef | grep root | grep "crond -c /data/adb/box/" | ${busybox_path} awk '{ print $2 }' | sort -u)
-  for cron in ${cronkill[*]}; do
+  for cron in ${cronkill[*]} ; do
      kill ${cron}
   done
   for list in ${bin_list[*]} ; do
@@ -287,15 +280,13 @@ case "$1" in
     time stop_box
     ;;
   restart)
-    time stop_box
-    log info "wait 1 sec" && sleep 1
-    time start_box
-    log info "next, renew iptables"
+    time stop_box && (log info "wait 1 sec" && sleep 1)
+    time start_box && log info "next, renew iptables"
     ;;
   usage)
     bin_usage
     ;;
   *)
-    echo "$0:  usage: $0 {start|stop}"
+    echo "$0:  usage: $0 {start|stop|restart|usage}"
     ;;
 esac

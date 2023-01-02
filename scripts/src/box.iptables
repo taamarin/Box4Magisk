@@ -184,7 +184,6 @@ start_tproxy() {
         ${ip6tables} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap6} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
         ${ip6tables} -t mangle -A BOX_EXTERNAL -p udp -i ${ap6} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
       done
-      # log info "${ap_list[*]} transparent proxy."
     fi
   fi
 
@@ -211,7 +210,6 @@ start_tproxy() {
       for ignore6 in ${ignore_out_list[*]} ; do
         ${ip6tables} -t mangle -I BOX_LOCAL -o ${ignore6} -j RETURN
       done
-      # log Info "${ignore_out_list[*]} ignore transparent proxy."
     fi
   fi
 
@@ -245,6 +243,7 @@ start_tproxy() {
   if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
   fi
+
   # ${iptables} -t mangle -I BOX_LOCAL -m mark --mark ${routing_mark} -j RETURN
   # Disable kernel
   # ${iptables} -t mangle -A BOX_LOCAL -m owner ! --uid 0-99999999 -j DROP
@@ -415,42 +414,40 @@ stop_tproxy() {
     ${ip6tables} -D OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
   fi
 
-  # if [ "${bin_name}" = "clash" ] ; then
-    ${iptables} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
+  ${iptables} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
 
-    ${iptables} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
+  ${iptables} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
 
-    ${iptables} -t nat -F CLASH_DNS_EXTERNAL
-    ${iptables} -t nat -X CLASH_DNS_EXTERNAL
+  ${iptables} -t nat -F CLASH_DNS_EXTERNAL
+  ${iptables} -t nat -X CLASH_DNS_EXTERNAL
 
-    ${iptables} -t nat -F CLASH_DNS_LOCAL
-    ${iptables} -t nat -X CLASH_DNS_LOCAL
+  ${iptables} -t nat -F CLASH_DNS_LOCAL
+  ${iptables} -t nat -X CLASH_DNS_LOCAL
 
-    ${iptables} -t nat -D OUTPUT -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
-    ${iptables} -t nat -D PREROUTING -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
-  # fi
+  ${iptables} -t nat -D OUTPUT -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  ${iptables} -t nat -D PREROUTING -d ${clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
 }
 
 start_tun() {
   ip rule add fwmark ${id} lookup ${id}
   ip route add default dev ${tun_device} table ${id}
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ip -6 rule add fwmark ${id} table ${id}
     ip -6 route add default dev ${tun_device} table ${id}
   fi
 
   ${iptables} -t mangle -N BOX_EXTERNAL
   ${iptables} -t mangle -N BOX_LOCAL
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -N BOX_EXTERNAL
     ${ip6tables} -t mangle -N BOX_LOCAL
   fi
 
-  for subnet in ${intranet[*]}; do
+  for subnet in ${intranet[*]} ; do
     ${iptables} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
   done
-  if [ "${ipv6}" == "true" ]; then
-    for subnet6 in ${intranet6[*]}; do
+  if [ "${ipv6}" = "true" ] ; then
+    for subnet6 in ${intranet6[*]} ; do
       ${ip6tables} -t mangle -A BOX_EXTERNAL -d ${subnet6} -j RETURN
     done
   fi
@@ -458,17 +455,17 @@ start_tun() {
   ${iptables} -t mangle -A BOX_LOCAL -m owner --gid-owner 3005 -j RETURN
   ${iptables} -t mangle -A BOX_EXTERNAL -j MARK --set-xmark ${id}
   ${iptables} -t mangle -I PREROUTING -j BOX_EXTERNAL
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -A BOX_LOCAL -m owner --gid-owner 3005 -j RETURN
     ${ip6tables} -t mangle -A BOX_EXTERNAL -j MARK --set-xmark ${id}
     ${ip6tables} -t mangle -I PREROUTING -j BOX_EXTERNAL
   fi
 
-  for subnet in ${intranet[*]}; do
+  for subnet in ${intranet[*]} ; do
     ${iptables} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
   done
-  if [ "${ipv6}" == "true" ]; then
-    for subnet6 in ${intranet6[*]}; do
+  if [ "${ipv6}" = "true" ] ; then
+    for subnet6 in ${intranet6[*]} ; do
       ${ip6tables} -t mangle -A BOX_LOCAL -d ${subnet6} -j RETURN
     done
   fi
@@ -476,7 +473,7 @@ start_tun() {
   ${iptables} -t mangle -A BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
   ${iptables} -t mangle -A BOX_LOCAL -j MARK --set-xmark ${id}
   ${iptables} -t mangle -I OUTPUT -j BOX_LOCAL
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -A BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
     ${ip6tables} -t mangle -A BOX_LOCAL -j MARK --set-xmark ${id}
     ${ip6tables} -t mangle -I OUTPUT -j BOX_LOCAL
@@ -486,7 +483,7 @@ start_tun() {
 stop_tun() {
   ip rule del fwmark ${id} lookup ${id}
   ip route del default dev ${tun_device} table ${id}
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ip -6 rule del fwmark ${id} lookup ${id}
     ip -6 route del default dev ${tun_device} table ${id}
   fi
@@ -494,7 +491,7 @@ stop_tun() {
   ${iptables} -t mangle -D OUTPUT -j BOX_LOCAL
   ${iptables} -t mangle -F BOX_LOCAL
   ${iptables} -t mangle -X BOX_LOCAL
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -D OUTPUT -j BOX_LOCAL
     ${ip6tables} -t mangle -F BOX_LOCAL
     ${ip6tables} -t mangle -X BOX_LOCAL
@@ -503,7 +500,7 @@ stop_tun() {
   ${iptables} -t mangle -D PREROUTING -j BOX_EXTERNAL
   ${iptables} -t mangle -F BOX_EXTERNAL
   ${iptables} -t mangle -X BOX_EXTERNAL
-  if [ "${ipv6}" == "true" ]; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables} -t mangle -D PREROUTING -j BOX_EXTERNAL
     ${ip6tables} -t mangle -F BOX_EXTERNAL
     ${ip6tables} -t mangle -X BOX_EXTERNAL
@@ -513,7 +510,7 @@ stop_tun() {
 if [ "${proxy_mode}" != "core" ] ; then
   case "$1" in
     enable)
-      [ "${run_dnstt}" != "false" ] && [ "${bin_name}" = "clash" ]  \
+      [ "${run_dnstt}" != "false" ] && [ "${bin_name}" = "clash" ] \
       && ${scripts_dir}/box.tool v2raydns
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
@@ -523,18 +520,22 @@ if [ "${proxy_mode}" != "core" ] ; then
         tproxy)
           log info "use tproxy: tcp + udp."
           log info "creating iptables transparent proxy rules."
-          time start_tproxy && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
+          time start_tproxy \
+          && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
           ;;
         tun)
           stop_tun >> /dev/null 2>&1
           log info "use tun: tcp + udp, stack: ${clash_stack}."
           log info "creating scripts iptables tun rules done."
-          time start_tun && log info "create scripts iptables tun proxy rules done." || log error "create scripts iptables tun proxy rule failed."
+          time start_tun \
+          && log info "create scripts iptables tun proxy rules done." || log error "create scripts iptables tun proxy rule failed."
           ;;
         *)
-          [ "${network_mode}" = "redirect" ] && log info "use redirect: tcp." || log info "use mixed: tcp + tun, stack: ${clash_stack}."
+          [ "${network_mode}" = "redirect" ] \
+          && log info "use redirect: tcp." || log info "use mixed: tcp + tun, stack: ${clash_stack}."
           log info "creating iptables transparent proxy rules."
-          time start_redirect && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
+          time start_redirect \
+          && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
           time forward -I
           ;;
       esac
@@ -551,19 +552,22 @@ if [ "${proxy_mode}" != "core" ] ; then
         tproxy)
           log info "use tproxy: tcp + udp."
           log info "creating iptables transparent proxy rules."
-          time start_tproxy && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
+          time start_tproxy \
+          && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
           ;;
         tun)
           forward -D >> /dev/null 2>&1
           stop_tun >> /dev/null 2>&1
           log info "use tun: tcp + udp, stack: ${clash_stack}."
           log info "creating scripts iptables tun rules done."
-          time forward -I && start_tun && log info "create scripts iptables tun proxy rules done." || log error "create scripts iptables tun proxy rule failed."
+          time forward -I && start_tun \
+          && log info "create scripts iptables tun proxy rules done." || log error "create scripts iptables tun proxy rule failed."
           ;;
         *)
           [ "${network_mode}" = "redirect" ] && log info "use redirect: tcp." || log info "use mixed: tcp + tun, stack: ${clash_stack}."
           log info "creating iptables transparent proxy rules."
-          time start_redirect && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
+          time start_redirect \
+          && log info "create iptables transparent proxy rules done." || log error "create iptables transparent proxy rule failed."
           time forward -I
         ;;
       esac

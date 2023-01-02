@@ -1,7 +1,7 @@
 {
   "log": {
     "access": "none",
-    "loglevel": "warning",
+    "loglevel": "error",
     "dnsLog": true
   },
   "inbounds": [
@@ -31,37 +31,44 @@
   "outbounds": [
     {
       "tag": "proxy",
-      "protocol": "vless",
+      "protocol": "vmess",
       "settings": {
         "vnext": [
           {
-            "address": "103.253.24.168",
-            "port": 443,
+            "address": "172.67.199.34",
+            "port": 80,
             "users": [
               {
-                "id": "xxx-xxx-xxx",
                 "alterId": 0,
-                "security": "none",
-                "encryption": "none"
+                "id": "password",
+                "level": 8,
+                "security": "auto"
               }
             ]
           }
         ]
       },
       "streamSettings": {
-        "network": "tcp",
-        "security": "tls",
-        "tlsSettings": {
-          "allowInsecure": true,
-          "serverName": "teams.microsoft.com"
+        "network": "ws",
+        "security": "none",
+        "wsSettings": {
+          "headers": {
+            "Host": "sggs.1server.co"
+          },
+          "path": "/fastssh"
         },
-        "tcpSettings": null,
-        "sockopt": {
-          "domainStrategy": "UseIPv4"
+        "tlsSettings": {
+          "allowInsecure": false,
+          "fingerprint": "safari",
+          "serverName": "sggs.1server.co"
         }
       },
+      "tcpSettings": null,
+      "sockopt": {
+        "domainStrategy": "UseIP"
+      },
       "mux": {
-        "concurrency": -1,
+        "concurrency": 8,
         "enabled": false
       }
     },
@@ -69,7 +76,7 @@
       "tag": "direct",
       "protocol": "freedom",
       "settings": {
-        "domainStrategy": "UseIPv4"
+        "domainStrategy": "UseIP"
       }
     },
     {
@@ -90,18 +97,16 @@
     }
   ],
   "dns": {
-    "hosts": {
-      "geosite:category-ads-all": "127.0.0.1"
-    },
+    "hosts": {},
     "servers": [
-      "1.1.1.1",
-      "8.8.8.8"
+      "8.8.8.8",
+      "1.1.1.1"
     ],
     "tag": "dns",
-    "queryStrategy": "UseIPv4"
+    "queryStrategy": "UseIP"
   },
   "routing": {
-    "domainStrategy": "IPIfNonMatch",
+    "domainStrategy": "AsIs",
     "domainMatcher": "mph",
     "rules": [
       {
@@ -120,6 +125,17 @@
         ]
       },
       {
+        "type": "field",
+        "outboundTag": "direct",
+        "port": "5228-5230"
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "port": "123",
+        "network": "udp"
+      },
+      {
         "domains": [
           "regexp:\\.googlesyndication.com$"
         ],
@@ -129,6 +145,14 @@
       {
         "domain": [
           "geosite:category-ads-all"
+        ],
+        "outboundTag": "block",
+        "type": "field"
+      },
+      {
+        "network": "udp",
+        "domain": [
+          "geosite:youtube"
         ],
         "outboundTag": "block",
         "type": "field"

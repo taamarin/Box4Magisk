@@ -128,15 +128,17 @@ update_kernel() {
     sing-box)
       download_link="https://github.com/SagerNet/sing-box/releases"
       github_api="https://api.github.com/repos/SagerNet/sing-box/releases"
+
       latest_version_tag=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
       latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "[0-9.]*")
+
       download_file="sing-box-${latest_version}-${platform}-${arch}"
       update_file ${data_dir}/${file_kernel}.tar.gz ${download_link}/download/${latest_version_tag}/${download_file}.tar.gz 
-      # extra tar.gz
+
       tar -xvf ${data_dir}/${file_kernel}.tar.gz -C ${data_dir} >&2
       mv -f ${data_dir}/${download_file}/sing-box ${bin_kernel}/sing-box \
       && rm -rf ${data_dir}/${download_file}
-      # end
+
       if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
       else
@@ -152,8 +154,14 @@ update_kernel() {
         filename="Clash.Meta-${platform}-${arch}-${latest_version}"
         update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/${tag}/${filename}.gz
       else
-        download_link="https://release.dreamacro.workers.dev/latest"
-        update_file ${data_dir}/${file_kernel}.gz ${download_link}/clash-linux-${arch}-latest.gz
+        if [ "${dev}" != "false" ] ; then
+          download_link="https://release.dreamacro.workers.dev/latest"
+          update_file ${data_dir}/${file_kernel}.gz ${download_link}/clash-linux-${arch}-latest.gz
+        else
+          download_link="https://github.com/Dreamacro/clash/releases"
+          filename=$(curl -fsSL ${download_link}/expanded_assets/premium | grep -oE "clash-linux-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
+          update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/premium/${filename}.gz
+        fi
       fi
       ;;
     xray)
@@ -166,7 +174,7 @@ update_kernel() {
         download_file="Xray-android-arm64-v8a.zip"
       fi
       update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
-      unzip -j -o "${data_dir}/${file_kernel}.zip" "xray" -d ${bin_kernel} >&2
+      unzip -o "${data_dir}/${file_kernel}.zip" "xray" -d ${bin_kernel} >&2
       if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
       else
@@ -229,7 +237,7 @@ cgroup_limit() {
 update_dashboard() {
   file_dasboard="${data_dir}/dashboard.zip"
   rm -rf ${data_dir}/dashboard/dist
-  curl -L -A 'clash' "https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
+  curl -L -A 'clash' "https://github.com/haishanh/yacd/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
   unzip -o  "${file_dasboard}" "yacd-gh-pages/*" -d ${data_dir}/dashboard >&2
   mv -f ${data_dir}/dashboard/yacd-gh-pages ${data_dir}/dashboard/dist
   rm -rf ${file_dasboard}
@@ -249,6 +257,18 @@ dnstt() {
     fi
   else
     log error "kernel dnstt no found" 
+  fi
+}
+
+run_base64() {
+  if [ "$(cat ${data_dir}/sing-box/acc.txt 2>&1)" != "" ] ; then
+    log info "$(cat ${data_dir}/sing-box/acc.txt 2>&1)"
+    base64 ${data_dir}/sing-box/acc.txt > ${data_dir}/dashboard/dist/proxy.txt
+    log info "ceks ${data_dir}/dashboard/dist/proxy.txt"
+    log info "done"
+  else
+    log warn "${data_dir}/sing-box/acc.txt kosong"
+    exit 1
   fi
 }
 
@@ -272,10 +292,13 @@ case "$1" in
   v2raydns)
     dnstt
     ;;
+  rbase64)
+    run_base64
+    ;;
   res)
     res
     ;;
   *)
-    echo "$0:  usage:  $0 {upyacd|v2raydns|upcore|cgroup|port|subgeo}"
+    echo "$0:  usage:  $0 {rbase64|upyacd|v2raydns|upcore|cgroup|port|subgeo}"
     ;;
 esac
