@@ -1,3 +1,6 @@
+#### ⟳ Changelog v4.6.3
+- Optimize Box service scripts
+
 #### ⟳ Changelog v4.6.2
 - rebase bfm scripts:
 - add LAN IP probe
