@@ -19,18 +19,14 @@ restart_box() {
   fi
 }
 
-res() {
-  ps -p $(pidof ${bin_name}) -o pid,uid,gid,rss,vsz,%cpu,time,start_time,etime,stat,cmd
-}
-
 update_file() {
   file="$1"
   file_bak="${file}.bak"
   update_url="$2"
   [ -f ${file} ] \
   && mv -f ${file} ${file_bak}
-  echo "curl -k --insecure -L -A '${bin_name}' ${update_url} -o ${file}"
-  curl -k --insecure -L -A '${bin_name}' ${update_url} -o ${file} 2>&1
+  echo "/data/adb/magisk/busybox wget --no-check-certificate ${update_url} -O ${file}"
+  /data/adb/magisk/busybox wget --no-check-certificate ${update_url} -O ${file} 2>&1
   sleep 0.5
   if [ -f "${file}" ] ; then
     echo ""
@@ -129,16 +125,15 @@ update_kernel() {
       download_link="https://github.com/SagerNet/sing-box/releases"
       github_api="https://api.github.com/repos/SagerNet/sing-box/releases"
 
-      latest_version_tag=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "[0-9.]*")
+      latest_version_tag=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*" | head -1)
+      latest_version=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- ${github_api} | grep -m 1 "tag_name" | grep -o "[0-9.]*" | head -1)
 
       download_file="sing-box-${latest_version}-${platform}-${arch}"
-      update_file ${data_dir}/${file_kernel}.tar.gz ${download_link}/download/${latest_version_tag}/${download_file}.tar.gz 
+      update_file "${data_dir}/${file_kernel}.tar.gz" "${download_link}/download/${latest_version_tag}/${download_file}.tar.gz"
 
-      tar -xvf ${data_dir}/${file_kernel}.tar.gz -C ${data_dir} >&2
-      mv -f ${data_dir}/${download_file}/sing-box ${bin_kernel}/sing-box \
-      && rm -rf ${data_dir}/${download_file}
-
+      tar -xvf "${data_dir}/${file_kernel}.tar.gz" -C ${data_dir} >&2
+      mv -f "${data_dir}/${download_file}/sing-box" "${bin_kernel}/sing-box" \
+      && rm -rf "${data_dir}/${download_file}"
       if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
       else
@@ -150,30 +145,30 @@ update_kernel() {
         tag="Prerelease-Alpha"
         tag_name="alpha-[0-9,a-z]+"
         download_link="https://github.com/taamarin/Clash.Meta/releases"
-        latest_version=$(curl -fsSL ${download_link}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
-        filename="Clash.Meta-${platform}-${arch}-${latest_version}"
-        update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/${tag}/${filename}.gz
+        latest_version=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- "${download_link}/expanded_assets/${tag}" | grep -oE "${tag_name}" | head -1)
+        filename="clash.meta-${platform}-${arch}-${latest_version}"
+        update_file "${data_dir}/${file_kernel}.gz" "${download_link}/download/${tag}/${filename}.gz"
       else
         if [ "${dev}" != "false" ] ; then
           download_link="https://release.dreamacro.workers.dev/latest"
-          update_file ${data_dir}/${file_kernel}.gz ${download_link}/clash-linux-${arch}-latest.gz
+          update_file "${data_dir}/${file_kernel}.gz" "${download_link}/clash-linux-${arch}-latest.gz"
         else
           download_link="https://github.com/Dreamacro/clash/releases"
-          filename=$(curl -fsSL ${download_link}/expanded_assets/premium | grep -oE "clash-linux-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
-          update_file ${data_dir}/${file_kernel}.gz ${download_link}/download/premium/${filename}.gz
+          filename=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- "${download_link}/expanded_assets/premium" | grep -oE "clash-linux-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
+          update_file "${data_dir}/${file_kernel}.gz" "${download_link}/download/premium/${filename}.gz"
         fi
       fi
       ;;
     xray)
       download_link="https://github.com/XTLS/Xray-core/releases"
       github_api="https://api.github.com/repos/XTLS/Xray-core/releases"
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      latest_version=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- ${github_api} | grep "tag_name" | grep -o "v[0-9.]*" | head -1)
       if [ "${arc}" != "aarch64" ] ; then
         download_file="Xray-linux-arm32-v7a.zip"
       else
         download_file="Xray-android-arm64-v8a.zip"
       fi
-      update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
+      update_file "${data_dir}/${file_kernel}.zip" "${download_link}/download/${latest_version}/${download_file}"
       unzip -o "${data_dir}/${file_kernel}.zip" "xray" -d ${bin_kernel} >&2
       if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
@@ -184,15 +179,15 @@ update_kernel() {
     v2fly)
       download_link="https://github.com/v2fly/v2ray-core/releases"
       github_api="https://api.github.com/repos/v2fly/v2ray-core/releases"
-      latest_version=$(curl -fsSL ${github_api} | grep -m 1 "tag_name" | grep -o "v[0-9.]*")
+      latest_version=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- ${github_api} | grep "tag_name" | grep -o "v[0-9.]*" | head -1)
       if [ "${arc}" != "aarch64" ] ; then
         download_file="v2ray-linux-arm32-v7a.zip"
       else
         download_file="v2ray-android-arm64-v8a.zip"
       fi
-      update_file ${data_dir}/${file_kernel}.zip ${download_link}/download/${latest_version}/${download_file}
+      update_file "${data_dir}/${file_kernel}.zip" "${download_link}/download/${latest_version}/${download_file}"
       unzip -j -o "${data_dir}/${file_kernel}.zip" "v2ray" -d ${bin_kernel} >&2 \
-      && mv ${bin_kernel}/v2ray ${bin_kernel}/v2fly || log error "failed replace"
+      && mv "${bin_kernel}/v2ray" "${bin_kernel}/v2fly" || log error "failed replace"
       if [ $(pidof ${bin_name}) ] && [ -f ${pid_file} ] ; then
         restart_box && exit 0
       else
@@ -204,13 +199,13 @@ update_kernel() {
       ;;
   esac
   if (gunzip --help > /dev/null 2>&1) ; then
-    if ! (gunzip ${data_dir}/${file_kernel}.gz) ; then
-      if ! (rm -rf ${data_dir}/${file_kernel}.gz.bak) ; then
-        rm -rf ${data_dir}/${file_kernel}.gz
+    if ! (gunzip "${data_dir}/${file_kernel}.gz") ; then
+      if ! (rm -rf "${data_dir}/${file_kernel}.gz.bak") ; then
+        rm -rf "${data_dir}/${file_kernel}.gz"
       fi
       log warn "gunzip ${file_kernel}.gz failed" 
     else
-      mv -f ${data_dir}/${file_kernel} ${bin_kernel}/${bin_name} && flag="true"
+      mv -f "${data_dir}/${file_kernel}" "${bin_kernel}/${bin_name}" && flag="true"
       if [ -f "${pid_file}" ] && [ "${flag}" = "true" ] ; then
         restart_box
       else
@@ -237,7 +232,7 @@ cgroup_limit() {
 update_dashboard() {
   file_dasboard="${data_dir}/dashboard.zip"
   rm -rf ${data_dir}/dashboard/dist
-  curl -L -A 'clash' "https://github.com/haishanh/yacd/archive/refs/heads/gh-pages.zip" -o ${file_dasboard} 2>&1
+  /data/adb/magisk/busybox wget --no-check-certificate "https://github.com/haishanh/yacd/archive/refs/heads/gh-pages.zip" -O ${file_dasboard} 2>&1
   unzip -o  "${file_dasboard}" "yacd-gh-pages/*" -d ${data_dir}/dashboard >&2
   mv -f ${data_dir}/dashboard/yacd-gh-pages ${data_dir}/dashboard/dist
   rm -rf ${file_dasboard}
@@ -275,7 +270,7 @@ run_base64() {
 case "$1" in
   subgeo)
     update_subgeo
-    rm -rf ${data_dir}/${bin_name}/*.bak && exit 1
+    rm -rf "${data_dir}/${bin_name}/*.bak" && exit 1
     ;;
   port)
     port_detection
@@ -294,9 +289,6 @@ case "$1" in
     ;;
   rbase64)
     run_base64
-    ;;
-  res)
-    res
     ;;
   *)
     echo "$0:  usage:  $0 {rbase64|upyacd|v2raydns|upcore|cgroup|port|subgeo}"

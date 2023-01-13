@@ -71,7 +71,7 @@ still_alive() {
   if ! pidof ${bin_name} ; then
     log error "${bin_name} layanan tidak berjalan." 
     log error "please, check ${bin_name}.log"
-    kill $(pidof ${bin_name}) || killall ${bin_name}
+    kill -9 $(pidof ${bin_name}) || killall -9 ${bin_name}
     rm -rf ${pid_file}
     exit 1
   fi
@@ -82,15 +82,15 @@ run_box() {
   log info "client list: ☐ ${bin_list[*]}"
   log info "select: ☑ ${bin_name}"
   log info "starting ${bin_name} service."
-  [ "${network_mode}" = "tproxy" ] \
+  [ "${network_mode}" = "tproxy" ] && [ "${proxy_mode}" != "core" ]\
   && log info "tproxy_port: (${tproxy_port}) pastikan port ⟳sinkron dgn config client"
   ulimit -SHn 1000000
   case "${bin_name}" in
     sing-box)
-      [ "${proxy_mode}" = "core" ] \
-      && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
+      # [ "${proxy_mode}" = "core" ] \
+      # && (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": true/' ${data_dir}/sing-box/config.json) || (sed -i 's/"auto_detect_interface":.*/"auto_detect_interface": false/' ${data_dir}/sing-box/config.json)
       if ${bin_path} check -D ${data_dir}/sing-box > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> ${run_path}/${bin_name}.log &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run -D ${data_dir}/sing-box > /dev/null 2> "${run_path}/${bin_name}.log" &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file."
@@ -119,7 +119,7 @@ run_box() {
       fi
       temporary_config_file
       if ${bin_path} -t -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/error.log ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} -d ${data_dir}/clash -f ${data_dir}/run/config.yaml > "${run_path}/${bin_name}.log" 2>&1 &
         echo -n $! > ${pid_file}
       else
         mv ${data_dir}/run/config.yaml ${clash_config}
@@ -136,7 +136,7 @@ run_box() {
       export XRAY_LOCATION_ASSET=${data_dir}/xray
       export XRAY_LOCATION_CONFDIR=${data_dir}/xray
       if ${bin_path} -test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} > "${run_path}/${bin_name}.log" 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." 
@@ -152,7 +152,7 @@ run_box() {
       export V2RAY_LOCATION_ASSET=${data_dir}/v2fly
       export V2RAY_LOCATION_CONFDIR=${data_dir}/v2fly
       if ${bin_path} test > ${run_path}/error.log 2>&1 ; then
-        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > ${run_path}/${bin_name}.log 2>&1 &
+        nohup ${busybox_path} setuidgid 0:3005 ${bin_path} run > "${run_path}/${bin_name}.log" 2>&1 &
         echo -n $! > ${pid_file}
       else
         log error "configuration failed, please check the ${run_path}/error.log file." 
@@ -255,10 +255,10 @@ start_box() {
 stop_box() {
   cronkill=$(ps -ef | grep root | grep "crond -c /data/adb/box/" | ${busybox_path} awk '{ print $2 }' | sort -u)
   for cron in ${cronkill[*]} ; do
-     kill ${cron}
+     kill -9 ${cron}
   done
   for list in ${bin_list[*]} ; do
-    kill $(pidof ${list}) || killall ${list}
+    kill -9 $(pidof ${list}) || killall -9 ${list}
   done
   sleep 0.5
   if ! [ $(pidof ${bin_name}) ] ; then
@@ -286,7 +286,11 @@ case "$1" in
   usage)
     bin_usage
     ;;
+  reload)
+    [ "${bin_name}" = "clash" ] \
+    && (temporary_config_file && log info "open yacd-meta/configs , klik reload configs") || log info "only for Clash"
+    ;;
   *)
-    echo "$0:  usage: $0 {start|stop|restart|usage}"
+    echo "$0:  usage: $0 {start|stop|restart|usage|reload}"
     ;;
 esac
